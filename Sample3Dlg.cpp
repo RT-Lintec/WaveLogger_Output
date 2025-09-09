@@ -36,11 +36,12 @@ static char THIS_FILE[] = __FILE__;
 #define GET_CHDATA_MAX			1024	// 1チャンネルの波形データ取得最大数
 
 #define MAX_ARRAY_SIZE			1048576 // データ最大数
-#define SUBSTRUCT_THREASHOLD	0.05f
+#define SUBSTRUCT_THRESHOLD	0.05f
 #define PARAM_SIZE				12		// param数
 #define SAMPLE_INTERVAL			4000	// 通常サンプル時間
 #define LONG_SAMPLE_INTERVAL	10000	// 2%上昇時サンプル時間
 #define FIFTY_CHECK_INTERVAL	50		// 50msecカウント用
+#define ARRAY_OFFSET			10		// FlowOutの現在位置からのオフセット(立ち上がり時にのみ利用するが、大きさに注意)
 
 int nonStepResult[PARAM_SIZE * 2]; // 12*2通りのデータ数
 int stepUpResult[PARAM_SIZE]; // ステップ上昇時のデータ
@@ -641,7 +642,8 @@ long CSample3Dlg::NonStepResonseTImeOutput(const float* flowOut, const float* mf
 {
 	long lResult = ERROR_SUCCESS;
 	bool isCount = false;
-	bool isUp, isDwn = false;
+	bool isUp = false, isDwn = false;
+	bool isNoise = false;
 	int thresholdCnt = 0;
 	int fiftyCheckCnt = 0;
 	int dataCnt = 0;
@@ -661,28 +663,45 @@ long CSample3Dlg::NonStepResonseTImeOutput(const float* flowOut, const float* mf
 			flowSub = flowOut[lIndex + 1] - flowOut[lIndex];
 
 			// 上昇カウント開始
-			if (flowSub > SUBSTRUCT_THREASHOLD && !isDwn && !isCount)
+			if (flowSub > SUBSTRUCT_THRESHOLD && !isDwn && !isCount)
 			{
-				isDwn = false;
-				isUp = true;
-				isCount = true;
-				pastMSec = 0;
-				millSec = 0;
-				upperLim = threshold_NonStep.volt[thresholdCnt] + threshold_NonStep.threshold[thresholdCnt];
-				lowerLim = threshold_NonStep.volt[thresholdCnt] - threshold_NonStep.threshold[thresholdCnt];
-				fiftyCheckCnt = 0;
+				// flowOutのノイズ(スパイク)判定
+				if ((flowOut[lIndex + ARRAY_OFFSET] <= threshold_NonStep.volt[thresholdCnt] + threshold_NonStep.threshold[thresholdCnt] 
+					&& flowOut[lIndex + ARRAY_OFFSET] >= threshold_NonStep.volt[thresholdCnt] - threshold_NonStep.threshold[thresholdCnt]))
+				{
+					isDwn = false;
+					isUp = true;
+					isCount = true;
+					pastMSec = 0;
+					millSec = 0;
+					upperLim = threshold_NonStep.volt[thresholdCnt] + threshold_NonStep.threshold[thresholdCnt];
+					lowerLim = threshold_NonStep.volt[thresholdCnt] - threshold_NonStep.threshold[thresholdCnt];
+					fiftyCheckCnt = 0;
+				}
+				else
+				{
+					isNoise = true;
+				}
 			}
 			// 下降カウント開始
-			else if (flowSub < -SUBSTRUCT_THREASHOLD && !isUp && !isCount)
+			// dataCnt % 2 == 1は下降スパイク判定
+			else if (dataCnt % 2 == 1 && flowSub < -SUBSTRUCT_THRESHOLD && !isUp && !isCount)
 			{
-				isUp = false;
-				isDwn = true;
-				isCount = true;
-				pastMSec = 0;
-				millSec = 0;
-				upperLim = threshold_NonStep.volt[PARAM_SIZE] + threshold_NonStep.threshold[PARAM_SIZE];
-				lowerLim = threshold_NonStep.volt[PARAM_SIZE] - threshold_NonStep.threshold[PARAM_SIZE];
-				fiftyCheckCnt = 0;
+				if (isNoise)
+				{
+					isNoise = false;
+				}
+				else
+				{
+					isUp = false;
+					isDwn = true;
+					isCount = true;
+					pastMSec = 0;
+					millSec = 0;
+					upperLim = threshold_NonStep.volt[PARAM_SIZE] + threshold_NonStep.threshold[PARAM_SIZE];
+					lowerLim = threshold_NonStep.volt[PARAM_SIZE] - threshold_NonStep.threshold[PARAM_SIZE];
+					fiftyCheckCnt = 0;
+				}
 			}
 
 			// カウント処理
@@ -804,7 +823,7 @@ long CSample3Dlg::StepResonseTImeOutput(const float* flowOut, const float* mfmOu
 			flowSub = flowOut[lIndex + 1] - flowOut[lIndex];
 
 			// 上昇カウント開始
-			if (flowSub > SUBSTRUCT_THREASHOLD && !isDwn && !isCount)
+			if (flowSub > SUBSTRUCT_THRESHOLD && !isDwn && !isCount)
 			{
 				isDwn = false;
 				isUp = true;
@@ -816,7 +835,7 @@ long CSample3Dlg::StepResonseTImeOutput(const float* flowOut, const float* mfmOu
 				fiftyCheckCnt = 0;
 			}
 			// 下降カウント開始
-			else if (flowSub < -SUBSTRUCT_THREASHOLD && !isUp && !isCount)
+			else if (flowSub < -SUBSTRUCT_THRESHOLD && !isUp && !isCount)
 			{
 				isUp = false;
 				isDwn = true;
