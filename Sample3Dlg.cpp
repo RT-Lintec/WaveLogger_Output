@@ -665,8 +665,16 @@ long CSample3Dlg::NonStepResonseTImeOutput(const float* flowOut, const float* mf
 			// 上昇カウント開始
 			if (flowSub > SUBSTRUCT_THRESHOLD && !isDwn && !isCount)
 			{
+				if (isNoise)
+				{
+					isNoise = false;
+					if (dataCnt % 2 == 1)
+					{
+						dataCnt--;
+					}
+				}
 				// flowOutのノイズ(スパイク)判定
-				if ((flowOut[lIndex + ARRAY_OFFSET] <= threshold_NonStep.volt[thresholdCnt] + threshold_NonStep.threshold[thresholdCnt] 
+				else if ((flowOut[lIndex + ARRAY_OFFSET] <= threshold_NonStep.volt[thresholdCnt] + threshold_NonStep.threshold[thresholdCnt]
 					&& flowOut[lIndex + ARRAY_OFFSET] >= threshold_NonStep.volt[thresholdCnt] - threshold_NonStep.threshold[thresholdCnt]))
 				{
 					isDwn = false;
@@ -685,13 +693,19 @@ long CSample3Dlg::NonStepResonseTImeOutput(const float* flowOut, const float* mf
 			}
 			// 下降カウント開始
 			// dataCnt % 2 == 1は下降スパイク判定
-			else if (dataCnt % 2 == 1 && flowSub < -SUBSTRUCT_THRESHOLD && !isUp && !isCount)
+			else if (flowSub < -SUBSTRUCT_THRESHOLD && !isUp && !isCount)
 			{
 				if (isNoise)
 				{
 					isNoise = false;
+					if (dataCnt % 2 == 1)
+					{
+						dataCnt--;
+					}
 				}
-				else
+				// mfmOutのノイズ(スパイク)判定
+				else if ((flowOut[lIndex - ARRAY_OFFSET] <= threshold_NonStep.volt[thresholdCnt] + threshold_NonStep.threshold[thresholdCnt]
+					&& flowOut[lIndex - ARRAY_OFFSET] >= threshold_NonStep.volt[thresholdCnt] - threshold_NonStep.threshold[thresholdCnt]))
 				{
 					isUp = false;
 					isDwn = true;
@@ -701,6 +715,10 @@ long CSample3Dlg::NonStepResonseTImeOutput(const float* flowOut, const float* mf
 					upperLim = threshold_NonStep.volt[PARAM_SIZE] + threshold_NonStep.threshold[PARAM_SIZE];
 					lowerLim = threshold_NonStep.volt[PARAM_SIZE] - threshold_NonStep.threshold[PARAM_SIZE];
 					fiftyCheckCnt = 0;
+				}
+				else
+				{
+					isNoise = true;
 				}
 			}
 
@@ -831,7 +849,9 @@ long CSample3Dlg::StepResonseTImeOutput(const float* flowOut, const float* mfmOu
 				pastMSec = 0;
 				millSec = 0;
 				upperLim = threshold_Step.volt_Up[thresholdCnt_Up] + threshold_Step.threshold_Up[thresholdCnt_Up];
+				upperLim = roundTo(upperLim, 6);
 				lowerLim = threshold_Step.volt_Up[thresholdCnt_Up] - threshold_Step.threshold_Up[thresholdCnt_Up];
+				lowerLim = roundTo(lowerLim, 6);
 				fiftyCheckCnt = 0;
 			}
 			// 下降カウント開始
