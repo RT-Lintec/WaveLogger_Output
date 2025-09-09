@@ -41,7 +41,8 @@ protected:
 	BOOL CheckFile(LPCTSTR lpszFilePath);
 
 	long GetMFCDataArray(CXdtDocument2* pXdtDoc, VARIANT& vntArray, float* flowOut, float* mfmOut);
-	long SaveCsvFile(LPCTSTR lpszFilePath, const float* flowOut, const float* mfmOut, long lDataCnt, BOOL bShowError = FALSE);
+	long SaveCsvFile(LPCTSTR lpszFilePath, BOOL bShowError = FALSE);
+	long NonStepResonseTImeOutput(const float* flowOut, const float* mfmOut, long lDataCnt, BOOL bShowError = FALSE);
 
 // ç\íz
 public:

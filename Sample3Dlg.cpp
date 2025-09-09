@@ -42,6 +42,7 @@ static char THIS_FILE[] = __FILE__;
 #define LONG_SAMPLE_INTERVAL	10000	// 2%上昇時サンプル時間
 #define FIFTY_CHECK_INTERVAL	50		// 50msecカウント用
 
+int nonStepResult[PARAM_SIZE * 2]; // 12*2通りのデータ数
 float roundTo(float value, int digits);
 
 struct thresholdSt
@@ -423,10 +424,13 @@ void CSample3Dlg::OnOK()
 	if (pRadio_NonStep->GetCheck())
 	{
 		if (lDataCnt > 0) {
+			// 応答時間データ作成
+			NonStepResonseTImeOutput(flowOut, mfmOut, lDataCnt, TRUE);
+
 			// CSVファイルに保存
 			CString strCsvFile(strFilePath, strFilePath.ReverseFind(_T('.')));
 			strCsvFile += _T(".csv");
-			if (SaveCsvFile(strCsvFile, flowOut, mfmOut, lDataCnt, TRUE) == ERROR_SUCCESS) {
+			if (SaveCsvFile(strCsvFile, TRUE) == ERROR_SUCCESS) {
 				// 正常終了
 				AfxMessageBox(IDS_COMPLETE_AVERAGE, MB_ICONINFORMATION);
 			}
@@ -611,6 +615,142 @@ long CSample3Dlg::GetMFCDataArray(CXdtDocument2* pXdtDoc, VARIANT& vntArray, flo
 	return lDataCnt;
 }
 
+long CSample3Dlg::NonStepResonseTImeOutput(const float* flowOut, const float* mfmOut, long lDataCnt, BOOL bShowError /*= FALSE*/)
+{
+	long lResult = ERROR_SUCCESS;
+	bool isCount = false;
+	bool isUp, isDwn = false;
+	int thresholdCnt = 0;
+	int fiftyCheckCnt = 0;
+	int dataCnt = 0;
+	int millSec = 0;
+	int pastMSec = 0;
+	float upperLim = 0.0f;
+	float lowerLim = 0.0f;
+
+	// flowOut, mfmOut値書き込み
+	TCHAR szWork[32];
+	for (long lIndex = 0; lIndex < lDataCnt; lIndex++) {
+		// !EOF
+		if (lIndex != lDataCnt - 1)
+		{
+			// flowOutで判定
+			float flowSub = 0;
+			flowSub = flowOut[lIndex + 1] - flowOut[lIndex];
+
+			// 上昇カウント開始
+			if (flowSub > SUBSTRUCT_THREASHOLD && !isDwn && !isCount)
+			{
+				isDwn = false;
+				isUp = true;
+				isCount = true;
+				pastMSec = 0;
+				millSec = 0;
+				upperLim = threshold_st.volt[thresholdCnt] + threshold_st.threshold[thresholdCnt];
+				lowerLim = threshold_st.volt[thresholdCnt] - threshold_st.threshold[thresholdCnt];
+				fiftyCheckCnt = 0;
+			}
+			// 下降カウント開始
+			else if (flowSub < -SUBSTRUCT_THREASHOLD && !isUp && !isCount)
+			{
+				isUp = false;
+				isDwn = true;
+				isCount = true;
+				pastMSec = 0;
+				millSec = 0;
+				upperLim = threshold_st.volt[PARAM_SIZE] + threshold_st.threshold[PARAM_SIZE];
+				lowerLim = threshold_st.volt[PARAM_SIZE] - threshold_st.threshold[PARAM_SIZE];
+				fiftyCheckCnt = 0;
+			}
+
+			// カウント処理
+			if (isCount)
+			{
+				// 計測時間経過
+				pastMSec++;
+
+				// 上昇時
+				if (isUp && !isDwn)
+				{
+					// 閾値範囲に入ったらカウントしない
+					if (mfmOut[lIndex] <= upperLim && mfmOut[lIndex] >= lowerLim)
+					{
+						fiftyCheckCnt = 0;
+					}
+					// 閾値範囲外ならmsecカウント
+					else
+					{
+						fiftyCheckCnt++;
+						// 50msec判定でNGならカウント
+						if (fiftyCheckCnt >= FIFTY_CHECK_INTERVAL)
+						{
+							millSec++;
+							millSec = max(millSec, pastMSec);
+						}
+					}
+
+					// 5%~100%且つ4000msec経過したらカウント終了
+					if (dataCnt < (PARAM_SIZE - 1) * 2 && pastMSec > SAMPLE_INTERVAL)
+					{
+						isUp = false;
+						isCount = false;
+						nonStepResult[dataCnt] = millSec;
+						dataCnt++;
+						fiftyCheckCnt = 0;
+					}
+					// 2%且つ10000msec経過したらカウント終了
+					else if (dataCnt == (PARAM_SIZE - 1) * 2 && pastMSec > LONG_SAMPLE_INTERVAL)
+					{
+						isUp = false;
+						isCount = false;
+						nonStepResult[dataCnt] = millSec;
+						dataCnt++;
+						fiftyCheckCnt = 0;
+					}
+				}
+				// 下昇時
+				else if (!isUp && isDwn)
+				{
+					// 閾値範囲に入ったらカウントしない
+					if (mfmOut[lIndex] <= upperLim && mfmOut[lIndex] >= lowerLim)
+					{
+						fiftyCheckCnt = 0;
+					}
+					// 閾値範囲外ならmsecカウント
+					else
+					{
+						fiftyCheckCnt++;
+						// 50msec判定でNGならカウント
+						if (fiftyCheckCnt >= FIFTY_CHECK_INTERVAL)
+						{
+							millSec++;
+							millSec = max(millSec, pastMSec);
+						}
+					}
+
+					// 4000msec経過したらカウント終了
+					if (pastMSec > SAMPLE_INTERVAL)
+					{
+						isDwn = false;
+						isCount = false;
+						nonStepResult[dataCnt] = millSec;
+						dataCnt++;
+						thresholdCnt++;
+						fiftyCheckCnt = 0;
+					}
+				}
+			}
+		}
+		else
+		{
+			// 何もしない
+		}
+	}
+
+	return lResult;
+}
+
+
 //////////////////////////////////////////////////////////////////////
 //
 //	関数名称：	SaveCsvFile
@@ -624,20 +764,9 @@ long CSample3Dlg::GetMFCDataArray(CXdtDocument2* pXdtDoc, VARIANT& vntArray, flo
 //	注意事項：	
 //
 /////////////////////////////////////////////////////////////////////
-long CSample3Dlg::SaveCsvFile(LPCTSTR lpszFilePath, const float* flowOut, const float* mfmOut, long lDataCnt, BOOL bShowError /*= FALSE*/)
+long CSample3Dlg::SaveCsvFile(LPCTSTR lpszFilePath, BOOL bShowError /*= FALSE*/)
 {
 	long lResult = ERROR_SUCCESS;
-	//bool isOn = false;
-	bool isCount = false;
-	bool isUp, isDwn = false;
-	int thresholdCnt = 0;
-	int fiftyCheckCnt = 0;
-	int dataCnt = 0;
-	int millSec = 0;
-	int pastMSec = 0;
-	float upperLim = 0.0f;
-	float lowerLim = 0.0f;
-	int nonStepResult[PARAM_SIZE * 2]; // 12*2通りのデータ数
 
 	try {
 		CString strInvalid;
@@ -646,140 +775,15 @@ long CSample3Dlg::SaveCsvFile(LPCTSTR lpszFilePath, const float* flowOut, const 
 		// CSVファイル作成
 		CStdioFile CsvFile(lpszFilePath, CFile::modeCreate | CFile::modeWrite | CFile::shareDenyWrite);
 
-		// flowOut, mfmOut値書き込み
-		TCHAR szWork[32];
-		for (long lIndex = 0; lIndex < lDataCnt; lIndex++) {
-			// !EOF
-			if (lIndex != lDataCnt - 1)
-			{
-				// flowOutで判定
-				float flowSub = 0;
-				flowSub = flowOut[lIndex + 1] - flowOut[lIndex];
 
-				// 上昇カウント開始
-				if (flowSub > SUBSTRUCT_THREASHOLD && !isDwn && !isCount)
-				{
-					isDwn = false;
-					isUp = true;
-					isCount = true;
-					pastMSec = 0;
-					millSec = 0;
-					upperLim = threshold_st.volt[thresholdCnt] + threshold_st.threshold[thresholdCnt];
-					lowerLim = threshold_st.volt[thresholdCnt] - threshold_st.threshold[thresholdCnt];
-					fiftyCheckCnt = 0;
-				}
-				// 下降カウント開始
-				else if (flowSub < -SUBSTRUCT_THREASHOLD && !isUp && !isCount)
-				{
-					isUp = false;
-					isDwn = true;
-					isCount = true;
-					pastMSec = 0;
-					millSec = 0;
-					upperLim = threshold_st.volt[PARAM_SIZE] + threshold_st.threshold[PARAM_SIZE];
-					lowerLim = threshold_st.volt[PARAM_SIZE] - threshold_st.threshold[PARAM_SIZE];
-					fiftyCheckCnt = 0;
-				}
+		//if (flowOut[lIndex] != FLT_MAX) {
+		//	_stprintf(szWork, _T("%f,%f\n"), flowOut[lIndex], mfmOut[lIndex]);
+		//}
+		//else {
+		//	_stprintf(szWork, _T("%s\n"), strInvalid);
+		//}
+		//CsvFile.WriteString(szWork);
 
-				// カウント処理
-				if (isCount)
-				{
-					// 計測時間経過
-					pastMSec++;
-
-					// 上昇時
-					if (isUp && !isDwn)
-					{
-						// 閾値範囲に入ったらカウントしない
-						if (mfmOut[lIndex] <= upperLim && mfmOut[lIndex] >= lowerLim)
-						{
-							fiftyCheckCnt = 0;
-						}
-						// 閾値範囲外ならmsecカウント
-						else
-						{
-							fiftyCheckCnt++;
-							// 50msec判定でNGならカウント
-							if (fiftyCheckCnt >= FIFTY_CHECK_INTERVAL)
-							{
-								millSec++;
-								millSec = max(millSec, pastMSec);
-							}
-						}
-
-						// 5%~100%且つ4000msec経過したらカウント終了
-						if (dataCnt < (PARAM_SIZE - 1) * 2 && pastMSec > SAMPLE_INTERVAL)
-						{
-							isUp = false;
-							isCount = false;
-							nonStepResult[dataCnt] = millSec;
-							dataCnt++;
-							fiftyCheckCnt = 0;
-						}
-						// 2%且つ10000msec経過したらカウント終了
-						else if (dataCnt == (PARAM_SIZE - 1) * 2 && pastMSec > LONG_SAMPLE_INTERVAL)
-						{
-							isUp = false;
-							isCount = false;
-							nonStepResult[dataCnt] = millSec;
-							dataCnt++;
-							fiftyCheckCnt = 0;
-						}
-
-						//if (flowOut[lIndex] != FLT_MAX) {
-						//	_stprintf(szWork, _T("%f,%f\n"), flowOut[lIndex], mfmOut[lIndex]);
-						//}
-						//else {
-						//	_stprintf(szWork, _T("%s\n"), strInvalid);
-						//}
-						CsvFile.WriteString(szWork);
-					}
-					// 下昇時
-					else if (!isUp && isDwn)
-					{
-						// 閾値範囲に入ったらカウントしない
-						if (mfmOut[lIndex] <= upperLim && mfmOut[lIndex] >= lowerLim)
-						{
-							fiftyCheckCnt = 0;
-						}
-						// 閾値範囲外ならmsecカウント
-						else
-						{
-							fiftyCheckCnt++;
-							// 50msec判定でNGならカウント
-							if (fiftyCheckCnt >= FIFTY_CHECK_INTERVAL)
-							{
-								millSec++;
-								millSec = max(millSec, pastMSec);
-							}
-						}
-
-						// 4000msec経過したらカウント終了
-						if (pastMSec > SAMPLE_INTERVAL)
-						{
-							isDwn = false;
-							isCount = false;
-							nonStepResult[dataCnt] = millSec;
-							dataCnt++;
-							thresholdCnt++;
-							fiftyCheckCnt = 0;
-						}
-
-						//if (flowOut[lIndex] != FLT_MAX) {
-						//	_stprintf(szWork, _T("%f,%f\n"), flowOut[lIndex], mfmOut[lIndex]);
-						//}
-						//else {
-						//	_stprintf(szWork, _T("%s\n"), strInvalid);
-						//}
-						CsvFile.WriteString(szWork);
-					}
-				}
-			}
-			else
-			{
-				// 何もしない
-			}
-		}
 	}
 	catch (CFileException* pFileEx) {
 		if (bShowError) {
