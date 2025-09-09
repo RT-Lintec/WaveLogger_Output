@@ -43,15 +43,31 @@ static char THIS_FILE[] = __FILE__;
 #define FIFTY_CHECK_INTERVAL	50		// 50msecカウント用
 
 int nonStepResult[PARAM_SIZE * 2]; // 12*2通りのデータ数
+int stepUpResult[PARAM_SIZE]; // ステップ上昇時のデータ
+int stepDwnResult[PARAM_SIZE]; // ステップ下昇時のデータ
 float roundTo(float value, int digits);
 
-struct thresholdSt
+/// <summary>
+/// 非ステップパラメータ
+/// </summary>
+struct thresholdSt_NonStep
 {
-	float volt[13] = { 5.0f, 4.5f ,4.0f, 3.5f, 3.0f, 2.5f, 2.0f, 1.5f, 1.0f, 0.5f, 0.25f, 0.1f, 0.0f };
+	float volt[13] = { 5.0f, 4.5f, 4.0f, 3.5f, 3.0f, 2.5f, 2.0f, 1.5f, 1.0f, 0.5f, 0.25f, 0.1f, 0.0f };
 	float threshold[13] = { 0.1f ,0.09f ,0.08f ,0.07f ,0.06f ,0.05f ,0.04f ,0.03f ,0.025f ,0.025f ,0.025f ,0.025f, 0.025f };
 };
-//float threshold[13] = { 0.1f ,0.09f ,0.08f ,0.07f ,0.06f ,0.05f ,0.04f ,0.03f ,0.025f ,0.025f ,0.025f ,0.025f ,0.025f };
-thresholdSt threshold_st;
+thresholdSt_NonStep threshold_NonStep;
+
+/// <summary>
+/// ステップパラメータ
+/// </summary>
+struct thresholdSt_Step
+{
+	float volt_Up[12] = { 0.1f, 0.25f, 0.5f, 1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f, 4.0f, 4.5f, 5.0f };
+	float volt_Dwn[12] = { 4.5f, 4.0f, 3.5f, 3.0f, 2.5f, 2.0f, 1.5f, 1.0f, 0.5f, 0.25f, 0.1f, 0.0f };
+	float threshold_Up[12] = { 0.025f ,0.025f ,0.025f, 0.025f, 0.03f, 0.04f, 0.05f, 0.06f, 0.07f, 0.08f, 0.09f, 0.1f };
+	float threshold_Dwn[12] = { 0.09f ,0.08f ,0.07f ,0.06f ,0.05f ,0.04f ,0.03f ,0.025f, 0.025f ,0.025f ,0.025f, 0.025f };
+};
+thresholdSt_Step threshold_Step;
 
 /////////////////////////////////////////////////////////////////////////////
 // アプリケーションのバージョン情報で使われている CAboutDlg ダイアログ
@@ -413,7 +429,7 @@ void CSample3Dlg::OnOK()
 	vntArray.vt = VT_ARRAY | VT_R4 | VT_BYREF;
 	vntArray.pparray = &psa;
 
-	// 平均値算出
+	// 対象データ取得
 	long lDataCnt = GetMFCDataArray(&XdtDoc, vntArray, flowOut, mfmOut);
 	XdtDoc.CloseFile();
 
@@ -444,9 +460,29 @@ void CSample3Dlg::OnOK()
 			AfxMessageBox(IDS_ERR_GETWAVEDATA, MB_ICONEXCLAMATION);
 		}
 	}
+	// ステップモード
 	else if (pRadio_Step->GetCheck())
 	{
-		AfxMessageBox(_T("工事中"));
+		if (lDataCnt > 0) {
+			// 応答時間データ作成
+			StepResonseTImeOutput(flowOut, mfmOut, lDataCnt, TRUE);
+
+			// CSVファイルに保存
+			CString strCsvFile(strFilePath, strFilePath.ReverseFind(_T('.')));
+			strCsvFile += _T(".csv");
+			if (SaveCsvFile(strCsvFile, TRUE) == ERROR_SUCCESS) {
+				// 正常終了
+				AfxMessageBox(IDS_COMPLETE_AVERAGE, MB_ICONINFORMATION);
+			}
+		}
+		else if (lDataCnt == 0) {
+			// 波形データなし
+			AfxMessageBox(IDS_ERR_NODATA, MB_ICONEXCLAMATION);
+		}
+		else {
+			// エラー
+			AfxMessageBox(IDS_ERR_GETWAVEDATA, MB_ICONEXCLAMATION);
+		}
 	}
 
 	// 平均値用バッファバッファ解放
@@ -557,28 +593,6 @@ long CSample3Dlg::GetMFCDataArray(CXdtDocument2* pXdtDoc, VARIANT& vntArray, flo
 			return -1;
 		}
 
-		//// 平均値算出
-		//float* pfData;
-		//SafeArrayAccessData(*vntArray.pparray, (void**)&pfData);
-		//for (long lIndex = 0; lIndex < lGetCount; lIndex++, lDataCnt++) {
-		//	flowOut[lDataCnt] = 0.;
-		//	long lValidChannel = 0;
-		//	for (long lChannel = 0; lChannel < HA_CHNUM_MAX; lChannel++) {
-		//		// 無効値は飛ばす
-		//		if (abValidChannel[lChannel] && pfData[GET_CHDATA_MAX * lChannel + lIndex] != FLT_MAX) {
-		//			flowOut[lDataCnt] += pfData[GET_CHDATA_MAX * lChannel + lIndex];
-		//			lValidChannel++;
-		//		}
-		//	}
-		//	if (lValidChannel != 0) {
-		//		flowOut[lDataCnt] /= (float)lValidChannel;
-		//	}
-		//	else {
-		//		// 有効値が１つもない場合は無効値を設定
-		//		flowOut[lDataCnt] = FLT_MAX;
-		//	}
-		//}
-
 		// FlowOut(0), MFMOut(2) 
 		float* pfData;
 		SafeArrayAccessData(*vntArray.pparray, (void**)&pfData);
@@ -615,6 +629,14 @@ long CSample3Dlg::GetMFCDataArray(CXdtDocument2* pXdtDoc, VARIANT& vntArray, flo
 	return lDataCnt;
 }
 
+/// <summary>
+/// 非ステップ応答時間の出力関数
+/// </summary>
+/// <param name="flowOut"></param>
+/// <param name="mfmOut"></param>
+/// <param name="lDataCnt"></param>
+/// <param name="bShowError"></param>
+/// <returns></returns>
 long CSample3Dlg::NonStepResonseTImeOutput(const float* flowOut, const float* mfmOut, long lDataCnt, BOOL bShowError /*= FALSE*/)
 {
 	long lResult = ERROR_SUCCESS;
@@ -646,8 +668,8 @@ long CSample3Dlg::NonStepResonseTImeOutput(const float* flowOut, const float* mf
 				isCount = true;
 				pastMSec = 0;
 				millSec = 0;
-				upperLim = threshold_st.volt[thresholdCnt] + threshold_st.threshold[thresholdCnt];
-				lowerLim = threshold_st.volt[thresholdCnt] - threshold_st.threshold[thresholdCnt];
+				upperLim = threshold_NonStep.volt[thresholdCnt] + threshold_NonStep.threshold[thresholdCnt];
+				lowerLim = threshold_NonStep.volt[thresholdCnt] - threshold_NonStep.threshold[thresholdCnt];
 				fiftyCheckCnt = 0;
 			}
 			// 下降カウント開始
@@ -658,8 +680,8 @@ long CSample3Dlg::NonStepResonseTImeOutput(const float* flowOut, const float* mf
 				isCount = true;
 				pastMSec = 0;
 				millSec = 0;
-				upperLim = threshold_st.volt[PARAM_SIZE] + threshold_st.threshold[PARAM_SIZE];
-				lowerLim = threshold_st.volt[PARAM_SIZE] - threshold_st.threshold[PARAM_SIZE];
+				upperLim = threshold_NonStep.volt[PARAM_SIZE] + threshold_NonStep.threshold[PARAM_SIZE];
+				lowerLim = threshold_NonStep.volt[PARAM_SIZE] - threshold_NonStep.threshold[PARAM_SIZE];
 				fiftyCheckCnt = 0;
 			}
 
@@ -750,6 +772,153 @@ long CSample3Dlg::NonStepResonseTImeOutput(const float* flowOut, const float* mf
 	return lResult;
 }
 
+/// <summary>
+/// ステップ応答時間の出力関数
+/// </summary>
+/// <param name="flowOut"></param>
+/// <param name="mfmOut"></param>
+/// <param name="lDataCnt"></param>
+/// <param name="bShowError"></param>
+/// <returns></returns>
+long CSample3Dlg::StepResonseTImeOutput(const float* flowOut, const float* mfmOut, long lDataCnt, BOOL bShowError /*= FALSE*/)
+{
+	long lResult = ERROR_SUCCESS;
+	bool isCount = false;
+	bool isUp, isDwn = false;
+	int thresholdCnt_Up = 0, thresholdCnt_Dwn = 0;
+	int fiftyCheckCnt = 0;
+	int dataCnt = 0;
+	int millSec = 0;
+	int pastMSec = 0;
+	float upperLim = 0.0f;
+	float lowerLim = 0.0f;
+
+	// flowOut, mfmOut値書き込み
+	TCHAR szWork[32];
+	for (long lIndex = 0; lIndex < lDataCnt; lIndex++) {
+		// !EOF
+		if (lIndex != lDataCnt - 1)
+		{
+			// flowOutで判定
+			float flowSub = 0;
+			flowSub = flowOut[lIndex + 1] - flowOut[lIndex];
+
+			// 上昇カウント開始
+			if (flowSub > SUBSTRUCT_THREASHOLD && !isDwn && !isCount)
+			{
+				isDwn = false;
+				isUp = true;
+				isCount = true;
+				pastMSec = 0;
+				millSec = 0;
+				upperLim = threshold_Step.volt_Up[thresholdCnt_Up] + threshold_Step.threshold_Up[thresholdCnt_Up];
+				lowerLim = threshold_Step.volt_Up[thresholdCnt_Up] - threshold_Step.threshold_Up[thresholdCnt_Up];
+				fiftyCheckCnt = 0;
+			}
+			// 下降カウント開始
+			else if (flowSub < -SUBSTRUCT_THREASHOLD && !isUp && !isCount)
+			{
+				isUp = false;
+				isDwn = true;
+				isCount = true;
+				pastMSec = 0;
+				millSec = 0;
+				upperLim = threshold_Step.volt_Dwn[thresholdCnt_Dwn] + threshold_Step.threshold_Dwn[thresholdCnt_Dwn];
+				upperLim = roundTo(upperLim, 6);
+				lowerLim = threshold_Step.volt_Dwn[thresholdCnt_Dwn] - threshold_Step.threshold_Dwn[thresholdCnt_Dwn];
+				lowerLim = roundTo(lowerLim, 6);
+				fiftyCheckCnt = 0;
+			}
+
+			// カウント処理
+			if (isCount)
+			{
+				// 計測時間経過
+				pastMSec++;
+
+				// 上昇時
+				if (isUp && !isDwn)
+				{
+					// 閾値範囲に入ったらカウントしない
+					if (mfmOut[lIndex] <= upperLim && mfmOut[lIndex] >= lowerLim)
+					{
+						fiftyCheckCnt = 0;
+					}
+					// 閾値範囲外ならmsecカウント
+					else
+					{
+						fiftyCheckCnt++;
+						// 50msec判定でNGならカウント
+						if (fiftyCheckCnt >= FIFTY_CHECK_INTERVAL)
+						{
+							millSec++;
+							millSec = max(millSec, pastMSec);
+						}
+					}
+
+					// 5%~100%且つ4000msec経過したらカウント終了
+					if (dataCnt != 0 && pastMSec > SAMPLE_INTERVAL)
+					{
+						isCount = false;
+						stepUpResult[dataCnt] = millSec;
+						dataCnt++;
+						thresholdCnt_Up++;
+						// 12回処理したら上昇完了
+						if (dataCnt == 12)
+						{
+							isUp = false;
+							dataCnt = 0;
+						}
+					}
+					// 最初の2%且つ10000msec経過したらカウント終了
+					else if (dataCnt == 0 && pastMSec > LONG_SAMPLE_INTERVAL)
+					{
+						isCount = false;
+						stepUpResult[dataCnt] = millSec;
+						dataCnt++;
+						thresholdCnt_Up++;
+					}
+				}
+				// 下昇時
+				else if (!isUp && isDwn)
+				{
+					// 閾値範囲に入ったらカウントしない
+					//if (mfmOut[lIndex] <= upperLim && mfmOut[lIndex] >= lowerLim)
+					if (roundTo(mfmOut[lIndex], 6) <= upperLim && roundTo(mfmOut[lIndex], 6) >= lowerLim)
+					{
+						fiftyCheckCnt = 0;
+					}
+					// 閾値範囲外ならmsecカウント
+					else
+					{
+						fiftyCheckCnt++;
+						// 50msec判定でNGならカウント
+						if (fiftyCheckCnt >= FIFTY_CHECK_INTERVAL)
+						{
+							millSec++;
+							millSec = max(millSec, pastMSec);
+						}
+					}
+
+					// 4000msec経過したらカウント終了
+					if (pastMSec > SAMPLE_INTERVAL)
+					{
+						isCount = false;
+						stepDwnResult[dataCnt] = millSec;
+						dataCnt++;
+						thresholdCnt_Dwn++;
+					}
+				}
+			}
+		}
+		else
+		{
+			// 何もしない
+		}
+	}
+
+	return lResult;
+}
 
 //////////////////////////////////////////////////////////////////////
 //
@@ -774,7 +943,6 @@ long CSample3Dlg::SaveCsvFile(LPCTSTR lpszFilePath, BOOL bShowError /*= FALSE*/)
 
 		// CSVファイル作成
 		CStdioFile CsvFile(lpszFilePath, CFile::modeCreate | CFile::modeWrite | CFile::shareDenyWrite);
-
 
 		//if (flowOut[lIndex] != FLT_MAX) {
 		//	_stprintf(szWork, _T("%f,%f\n"), flowOut[lIndex], mfmOut[lIndex]);

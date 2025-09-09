@@ -41,8 +41,15 @@ protected:
 	BOOL CheckFile(LPCTSTR lpszFilePath);
 
 	long GetMFCDataArray(CXdtDocument2* pXdtDoc, VARIANT& vntArray, float* flowOut, float* mfmOut);
+
+	// CSV出力関数
 	long SaveCsvFile(LPCTSTR lpszFilePath, BOOL bShowError = FALSE);
+
+	// 非ステップ応答時間の出力関数
 	long NonStepResonseTImeOutput(const float* flowOut, const float* mfmOut, long lDataCnt, BOOL bShowError = FALSE);
+
+	// ステップ応答時間の出力関数
+	long StepResonseTImeOutput(const float* flowOut, const float* mfmOut, long lDataCnt, BOOL bShowError = FALSE);
 
 // 構築
 public:
