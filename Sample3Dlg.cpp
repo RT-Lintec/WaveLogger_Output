@@ -198,6 +198,9 @@ BEGIN_MESSAGE_MAP(CSample3Dlg, CDialog)
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BROWSE_BTN, OnBrowseBtn)
 	//}}AFX_MSG_MAP
+	ON_BN_CLICKED(IDC_RADIO1, &CSample3Dlg::OnBnClickedRadio1)
+	ON_BN_CLICKED(IDC_RADIO2, &CSample3Dlg::OnBnClickedRadio2)
+	ON_BN_CLICKED(IDOK, &CSample3Dlg::OnBnClickedOk)
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -372,6 +375,8 @@ void CSample3Dlg::OnBrowseBtn()
 void CSample3Dlg::OnOK() 
 {
 	CWaitCursor WaitCursor;
+	CButton* pRadio_NonStep = (CButton*)GetDlgItem(IDC_RADIO1);
+	CButton* pRadio_Step = (CButton*)GetDlgItem(IDC_RADIO2);
 
 	// ファイルパスチェック
 	CString strFilePath;
@@ -414,22 +419,30 @@ void CSample3Dlg::OnOK()
 	// 波形データ配列取得用バッファ解放
 	SafeArrayDestroy(psa);
 
-	if (lDataCnt > 0) {
-		// CSVファイルに保存
-		CString strCsvFile(strFilePath, strFilePath.ReverseFind(_T('.')));
-		strCsvFile += _T(".csv");
-		if (SaveCsvFile(strCsvFile, flowOut, mfmOut, lDataCnt, TRUE) == ERROR_SUCCESS) {
-			// 正常終了
-			AfxMessageBox(IDS_COMPLETE_AVERAGE, MB_ICONINFORMATION);
+	// 非ステップモード
+	if (pRadio_NonStep->GetCheck())
+	{
+		if (lDataCnt > 0) {
+			// CSVファイルに保存
+			CString strCsvFile(strFilePath, strFilePath.ReverseFind(_T('.')));
+			strCsvFile += _T(".csv");
+			if (SaveCsvFile(strCsvFile, flowOut, mfmOut, lDataCnt, TRUE) == ERROR_SUCCESS) {
+				// 正常終了
+				AfxMessageBox(IDS_COMPLETE_AVERAGE, MB_ICONINFORMATION);
+			}
+		}
+		else if (lDataCnt == 0) {
+			// 波形データなし
+			AfxMessageBox(IDS_ERR_NODATA, MB_ICONEXCLAMATION);
+		}
+		else {
+			// エラー
+			AfxMessageBox(IDS_ERR_GETWAVEDATA, MB_ICONEXCLAMATION);
 		}
 	}
-	else if (lDataCnt == 0) {
-		// 波形データなし
-		AfxMessageBox(IDS_ERR_NODATA, MB_ICONEXCLAMATION);
-	}
-	else {
-		// エラー
-		AfxMessageBox(IDS_ERR_GETWAVEDATA, MB_ICONEXCLAMATION);
+	else if (pRadio_Step->GetCheck())
+	{
+		AfxMessageBox(_T("工事中"));
 	}
 
 	// 平均値用バッファバッファ解放
@@ -632,8 +645,7 @@ long CSample3Dlg::SaveCsvFile(LPCTSTR lpszFilePath, const float* flowOut, const 
 
 		// CSVファイル作成
 		CStdioFile CsvFile(lpszFilePath, CFile::modeCreate | CFile::modeWrite | CFile::shareDenyWrite);
-		// TODO fiftyCheck名称変更、マジックnumマクロ化
-		// NonStepの場合
+
 		// flowOut, mfmOut値書き込み
 		TCHAR szWork[32];
 		for (long lIndex = 0; lIndex < lDataCnt; lIndex++) {
@@ -765,7 +777,7 @@ long CSample3Dlg::SaveCsvFile(LPCTSTR lpszFilePath, const float* flowOut, const 
 			}
 			else
 			{
-
+				// 何もしない
 			}
 		}
 	}
@@ -784,4 +796,38 @@ long CSample3Dlg::SaveCsvFile(LPCTSTR lpszFilePath, const float* flowOut, const 
 float roundTo(float value, int digits) {
 	float factor = std::pow(10.0f, digits);
 	return std::round(value * factor) / factor;
+}
+
+
+void CSample3Dlg::OnBnClickedRadio1()
+{
+	// TODO: ここにコントロール通知ハンドラー コードを追加します。
+}
+
+
+void CSample3Dlg::OnBnClickedRadio2()
+{
+	// TODO: ここにコントロール通知ハンドラー コードを追加します。
+}
+
+
+/// <summary>
+/// 実行ボタンクリック時の操作
+/// 実行前の設定が正しくなされているかをチェックする
+/// </summary>
+void CSample3Dlg::OnBnClickedOk()
+{
+	// 出力モードのラジオボタンアクセスポインタ
+	CButton* pRadio_NonStep = (CButton*)GetDlgItem(IDC_RADIO1);
+	CButton* pRadio_Step = (CButton*)GetDlgItem(IDC_RADIO2);
+
+	// 出力モード選択チェック
+	if (!pRadio_NonStep->GetCheck() && !pRadio_Step->GetCheck())
+	{
+		AfxMessageBox(_T("ラジオボタンから出力モードを選択してください。"));
+	}
+	else
+	{
+		CSample3Dlg::OnOK();
+	}
 }

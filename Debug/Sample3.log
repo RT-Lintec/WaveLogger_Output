@@ -1,12 +1,4 @@
 ﻿cl : コマンド ライン warning D9035: オプション 'Gm' の使用は現在推奨されていません。今後のバージョンからは削除されます。
-  StdAfx.cpp
-  _WIN32_WINNT not defined. Defaulting to _WIN32_WINNT_MAXVER (see WinSDKVer.h)
-cl : コマンド ライン warning D9035: オプション 'Gm' の使用は現在推奨されていません。今後のバージョンからは削除されます。
-  wavelogger2.cpp
   Sample3Dlg.cpp
-C:\Users\takahashi\Documents\programs\WaveLoggerOutput\Sample3Dlg.cpp(785,15): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
-  Sample3.cpp
-C:\Users\takahashi\Documents\programs\WaveLoggerOutput\Sample3.cpp(91,2): warning C4996: 'CWinApp::Enable3dControlsStatic': CWinApp::Enable3dControlsStatic is no longer needed. You should remove this call.
-  コードを生成中...
-Sample3.obj : warning LNK4075: /EDITANDCONTINUE は /SAFESEH の指定によって無視されます。
+C:\Users\takahashi\Documents\programs\WaveLoggerOutput\Sample3Dlg.cpp(797,15): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
   Sample3.vcxproj -> C:\Users\takahashi\Documents\programs\WaveLoggerOutput\Debug\Sample3.exe
