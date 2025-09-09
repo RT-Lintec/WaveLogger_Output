@@ -46,6 +46,9 @@ static char THIS_FILE[] = __FILE__;
 int nonStepResult[PARAM_SIZE * 2]; // 12*2通りのデータ数
 int stepUpResult[PARAM_SIZE]; // ステップ上昇時のデータ
 int stepDwnResult[PARAM_SIZE]; // ステップ下昇時のデータ
+
+CListCtrl* m_listOutput1;
+CListCtrl* m_listOutput2;
 float roundTo(float value, int digits);
 
 /// <summary>
@@ -1031,6 +1034,7 @@ void CSample3Dlg::OnBnClickedOk()
 	// 出力モードのラジオボタンアクセスポインタ
 	CButton* pRadio_NonStep = (CButton*)GetDlgItem(IDC_RADIO1);
 	CButton* pRadio_Step = (CButton*)GetDlgItem(IDC_RADIO2);
+	m_listOutput1 = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT1);
 
 	// 出力モード選択チェック
 	if (!pRadio_NonStep->GetCheck() && !pRadio_Step->GetCheck())
@@ -1039,6 +1043,14 @@ void CSample3Dlg::OnBnClickedOk()
 	}
 	else
 	{
+		// リストコントロールの初期化
+		m_listOutput1->DeleteColumn(0);
+		m_listOutput1->DeleteColumn(1);
+		
+		// TODO 非ステップとステップでリスト構造を分ける？
+		// リストコントロールの列追加
+		m_listOutput1->InsertColumn(0, _T("出力No"), LVCFMT_LEFT, 80);
+		m_listOutput1->InsertColumn(1, _T("出力時間"), LVCFMT_LEFT, 100);
 		CSample3Dlg::OnOK();
 	}
 }

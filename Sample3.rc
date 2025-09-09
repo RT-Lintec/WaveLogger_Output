@@ -84,20 +84,24 @@ BEGIN
     LTEXT           "R1.00.00",IDC_STATIC,40,21,66,8
 END
 
-IDD_SAMPLE3_DIALOG DIALOGEX 0, 0, 319, 202
+IDD_SAMPLE3_DIALOG DIALOGEX 0, 0, 481, 352
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_APPWINDOW
 CAPTION "Sample3"
 FONT 9, "ＭＳ Ｐゴシック", 0, 0, 0x1
 BEGIN
-    LTEXT           "Static",IDC_SUMMARY_STA,7,7,305,84,SS_SUNKEN
-    LTEXT           "ファイル(&F)",IDC_STATIC,7,105,33,8
-    EDITTEXT        IDC_FILE_EDIT,57,103,214,14,ES_AUTOHSCROLL
-    PUSHBUTTON      "参照(&B)...",IDC_BROWSE_BTN,272,103,40,14
-    DEFPUSHBUTTON   "実行",IDOK,202,181,50,14
-    PUSHBUTTON      "終了",IDCANCEL,262,181,50,14
-    CONTROL         "応答(非ステップ)",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON,205,131,65,10
-    CONTROL         "応答(ステップ)",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,205,147,58,10
+    LTEXT           "Static",IDC_SUMMARY_STA,7,7,467,84,SS_SUNKEN
+    LTEXT           "ファイル(&F)",IDC_STATIC,7,98,33,8
+    EDITTEXT        IDC_FILE_EDIT,47,93,214,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "参照(&B)...",IDC_BROWSE_BTN,267,93,40,14
+    DEFPUSHBUTTON   "実行",IDOK,298,331,50,14
+    PUSHBUTTON      "終了",IDCANCEL,424,331,50,14
+    CONTROL         "応答(非ステップ)",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON,323,95,65,10
+    CONTROL         "応答(ステップ)",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,391,95,58,10
+    LTEXT           "出力結果",IDC_STATIC,18,288,28,8
+    CONTROL         "",IDC_LIST_OUTPUT1,"SysListView32",LVS_REPORT | LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,7,125,123,157
+    CONTROL         "",IDC_LIST_OUTPUT2,"SysListView32",LVS_REPORT | LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,155,125,117,157
+    CONTROL         "",IDC_LIST_OUTPUT3,"SysListView32",LVS_REPORT | LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,308,125,117,157
 END
 
 
@@ -161,9 +165,9 @@ BEGIN
     IDD_SAMPLE3_DIALOG, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 312
+        RIGHTMARGIN, 474
         TOPMARGIN, 7
-        BOTTOMMARGIN, 195
+        BOTTOMMARGIN, 345
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -189,8 +193,8 @@ STRINGTABLE
 BEGIN
     IDS_ABOUTBOX            "Sample3 のﾊﾞｰｼﾞｮﾝ情報(&A)..."
     IDS_ERR_OLE_INIT        "OLE DLL 初期化に失敗しました。"
-    IDS_SUMMARY             "【処理概要】\n指定されたファイルからユニット１のチャンネル１～最後までのデータを分割して取得、平均値の波形データを作成してCSVファイルに保存します。"
-    IDS_REMARKS             "【注意事項】\n・サンプリングデータ数の上限は65536です\n・無効データは読み飛ばします\n・1番目の計測ユニットにデータがない場合はエラーとなります"
+    IDS_SUMMARY             "【処理概要】\n指定されたファイルからユニット１のチャンネルX(FlowOut),Y(MFMOut)から応答時間を出力します。\n出力モードは以下のラジオボタンから選択します。"
+    IDS_REMARKS             "【注意事項】\n・サンプリングデータ数の上限は1048576です\n・無効データは読み飛ばします\n・1番目の計測ユニットにデータがない場合はエラーとなります"
     IDS_FILEFILTER_XDT      "WAVE LOGGER  データファイル(xdt)|*.xdt"
     IDS_ERR_RUN_WAVELOGGER  "WAVE LOGGERの起動に失敗しました。"
     IDS_ERR_FILEPATH        "有効なファイルを指定してください。"
