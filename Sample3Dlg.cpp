@@ -54,7 +54,11 @@ CListCtrl* m_listOutput_StepDwn;
 CButton* pRadio_NonStep;
 CButton* pRadio_Step;
 
-const int vSize = 541;
+const int hSize = 950;
+const int vSize = 550;
+int m_nScrollPosX;     // 横スクロール位置
+int m_nScrollRangeX;   // コンテンツ全体の幅
+int m_nScrollPageX;    // 横スクロールページサイズ（表示領域の幅）
 int m_nScrollPosY;  // 縦スクロール位置
 int m_nScrollRangeY; // 縦スクロール範囲
 int m_nScrollPageY;  // 縦スクロールページサイズ（表示領域の高さ）
@@ -236,6 +240,7 @@ BEGIN_MESSAGE_MAP(CSample3Dlg, CDialog)
 	ON_BN_CLICKED(IDC_RADIO2, &CSample3Dlg::OnBnClickedRadio2)
 	ON_BN_CLICKED(IDOK, &CSample3Dlg::OnBnClickedOk)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_LIST_OUTPUT2, &CSample3Dlg::OnLvnItemchangedListOutput2)
+	ON_WM_HSCROLL()
 	ON_WM_VSCROLL()
 	ON_WM_SIZE()
 END_MESSAGE_MAP()
@@ -298,17 +303,32 @@ BOOL CSample3Dlg::OnInitDialog()
 	// スクロール位置初期化
 	m_nScrollPosY = 0;
 
-	// 全体のコンテンツの高さ（スクロール可能な高さ）をセット
+	// 全体のコンテンツの幅、高さ（スクロール可能な）をセット
+	m_nScrollRangeX = hSize;
 	m_nScrollRangeY = vSize; // 例えば1000ピクセル（実際の内容サイズに合わせる）
 
 	// 表示領域の高さを取得してページサイズ設定
 	CRect rect;
 	GetClientRect(&rect);
+	m_nScrollPageX = rect.Width();
 	m_nScrollPageY = rect.Height();
 
 	// スクロールバーの範囲とページを設定
-	SetScrollRange(SB_VERT, 0, m_nScrollRangeY - m_nScrollPageY, FALSE);
-	SetScrollPos(SB_VERT, m_nScrollPosY, TRUE);
+	//SetScrollRange(SB_VERT, 0, m_nScrollRangeY - m_nScrollPageY, FALSE);
+	//SetScrollPos(SB_VERT, m_nScrollPosY, TRUE);
+	// 垂直スクロール
+	if (m_nScrollRangeY > m_nScrollPageY)
+	{
+		SetScrollRange(SB_VERT, 0, m_nScrollRangeY - m_nScrollPageY, FALSE);
+		SetScrollPos(SB_VERT, 0, TRUE);
+	}
+
+	// 水平スクロール
+	if (m_nScrollRangeX > m_nScrollPageX)
+	{
+		SetScrollRange(SB_HORZ, 0, m_nScrollRangeX - m_nScrollPageX, FALSE);
+		SetScrollPos(SB_HORZ, 0, TRUE);
+	}
 
 	return TRUE;  // TRUE を返すとコントロールに設定したフォーカスは失われません。
 }
@@ -1326,6 +1346,42 @@ void CSample3Dlg::OnLvnItemchangedListOutput2(NMHDR* pNMHDR, LRESULT* pResult)
 	*pResult = 0;
 }
 
+void CSample3Dlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
+{
+	int nNewPos = m_nScrollPosX;
+
+	switch (nSBCode)
+	{
+	case SB_LINELEFT:
+		nNewPos = max(nNewPos - 10, 0);
+		break;
+	case SB_LINERIGHT:
+		nNewPos = min(nNewPos + 10, m_nScrollRangeX - m_nScrollPageX);
+		break;
+	case SB_PAGELEFT:
+		nNewPos = max(nNewPos - m_nScrollPageX, 0);
+		break;
+	case SB_PAGERIGHT:
+		nNewPos = min(nNewPos + m_nScrollPageX, m_nScrollRangeX - m_nScrollPageX);
+		break;
+	case SB_THUMBTRACK:
+	case SB_THUMBPOSITION:
+		nNewPos = nPos;
+		break;
+	default:
+		break;
+	}
+
+	if (nNewPos != m_nScrollPosX)
+	{
+		ScrollWindow(m_nScrollPosX - nNewPos, 0); // ← 横方向スクロール
+		m_nScrollPosX = nNewPos;
+		SetScrollPos(SB_HORZ, m_nScrollPosX, TRUE);
+	}
+
+	CDialog::OnHScroll(nSBCode, nPos, pScrollBar);
+}
+
 void CSample3Dlg::OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 {
 	int nNewPos = m_nScrollPosY;
@@ -1372,34 +1428,50 @@ void CSample3Dlg::OnSize(UINT nType, int cx, int cy)
 {
 	CDialog::OnSize(nType, cx, cy);
 
-	// クライアント領域の高さを更新
+	if (cx <= 0 || cy <= 0) return;
+
 	m_nScrollPageY = cy;
+	m_nScrollPageX = cx;
 
-	// 最大スクロール位置（スクロール可能範囲）
-	int nMaxScrollPos = m_nScrollRangeY - m_nScrollPageY;
-	if (nMaxScrollPos < 0) nMaxScrollPos = 0;
-
-	// 現在のスクロール位置がはみ出す場合は補正（←これが重要！）
-	if (m_nScrollPosY > nMaxScrollPos)
+	// 縦スクロール範囲
+	int nMaxScrollY = max(0, m_nScrollRangeY - m_nScrollPageY);
+	if (m_nScrollPosY > nMaxScrollY)
 	{
-		int delta = m_nScrollPosY - nMaxScrollPos;
-
-		// 画面を上にスクロールして戻す
-		ScrollWindow(0, delta);
-		m_nScrollPosY = nMaxScrollPos;
+		ScrollWindow(0, m_nScrollPosY - nMaxScrollY);
+		m_nScrollPosY = nMaxScrollY;
 	}
 
-	// スクロールバーの表示・非表示
-	if (nMaxScrollPos > 0)
+	if (nMaxScrollY > 0)
 	{
 		ShowScrollBar(SB_VERT, TRUE);
-		SetScrollRange(SB_VERT, 0, nMaxScrollPos, FALSE);
+		SetScrollRange(SB_VERT, 0, nMaxScrollY, FALSE);
 		SetScrollPos(SB_VERT, m_nScrollPosY, TRUE);
 	}
 	else
 	{
 		ShowScrollBar(SB_VERT, FALSE);
-		SetScrollPos(SB_VERT, 0, TRUE);
 		m_nScrollPosY = 0;
+		SetScrollPos(SB_VERT, 0, TRUE);
+	}
+
+	// 横スクロール範囲
+	int nMaxScrollX = max(0, m_nScrollRangeX - m_nScrollPageX);
+	if (m_nScrollPosX > nMaxScrollX)
+	{
+		ScrollWindow(m_nScrollPosX - nMaxScrollX, 0);
+		m_nScrollPosX = nMaxScrollX;
+	}
+
+	if (nMaxScrollX > 0)
+	{
+		ShowScrollBar(SB_HORZ, TRUE);
+		SetScrollRange(SB_HORZ, 0, nMaxScrollX, FALSE);
+		SetScrollPos(SB_HORZ, m_nScrollPosX, TRUE);
+	}
+	else
+	{
+		ShowScrollBar(SB_HORZ, FALSE);
+		m_nScrollPosX = 0;
+		SetScrollPos(SB_HORZ, 0, TRUE);
 	}
 }

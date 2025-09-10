@@ -55,7 +55,7 @@ protected:
 	void CopySelectedItemToClipboard();
 
 	BOOL PreTranslateMessage(MSG* pMsg);
-
+	afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
 	afx_msg void OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	//DECLARE_MESSAGE_MAP()
