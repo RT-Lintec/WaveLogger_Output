@@ -1137,10 +1137,6 @@ void CSample3Dlg::OnBnClickedOk()
 	btn_Cp_StepUp = (CButton*)GetDlgItem(IDC_BUTTON_CP_STEP_UP);
 	btn_Cp_StepDwn = (CButton*)GetDlgItem(IDC_BUTTON_CP_STEP_DWN);
 
-	btn_Cp_Nonstep->EnableWindow(FALSE);
-	btn_Cp_StepUp->EnableWindow(FALSE);
-	btn_Cp_StepDwn->EnableWindow(FALSE);
-
 	m_listOutput_NonStep = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT1);
 	m_listOutput_StepUp = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT2);
 	m_listOutput_StepDwn = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT3);
