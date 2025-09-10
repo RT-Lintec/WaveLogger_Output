@@ -230,6 +230,7 @@ BEGIN_MESSAGE_MAP(CSample3Dlg, CDialog)
 	ON_BN_CLICKED(IDC_RADIO1, &CSample3Dlg::OnBnClickedRadio1)
 	ON_BN_CLICKED(IDC_RADIO2, &CSample3Dlg::OnBnClickedRadio2)
 	ON_BN_CLICKED(IDOK, &CSample3Dlg::OnBnClickedOk)
+	ON_NOTIFY(LVN_ITEMCHANGED, IDC_LIST_OUTPUT2, &CSample3Dlg::OnLvnItemchangedListOutput2)
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1090,14 +1091,18 @@ void CSample3Dlg::OnBnClickedOk()
 			{
 				for (int i = 0; i < nonStepDataCnt; i++)
 				{
-					m_listOutput_NonStep->DeleteItem(i);
-					// 実際の0インデクスデータ数よりも多く消しているが、エラーないので放置
+					// リストの先頭削除を繰り返すことで全て削除
+					// (i)とすると消すごとにオフセットされるので全て消せない
 					m_listOutput_NonStep->DeleteItem(0);
 				}
 			}
 
-			m_listOutput_NonStep->DeleteColumn(0);
-			m_listOutput_NonStep->DeleteColumn(1);
+			// 2列あり、一つ消すと[1]→[0]になるため連続して0を消している
+			int columnCount = m_listOutput_NonStep->GetHeaderCtrl()->GetItemCount();
+			for (int i = 0; i < columnCount; i++)
+			{
+				m_listOutput_NonStep->DeleteColumn(0);
+			}			
 
 			// 列追加
 			m_listOutput_NonStep->InsertColumn(0, _T("出力設定(%)"), LVCFMT_LEFT, 80);
@@ -1106,10 +1111,37 @@ void CSample3Dlg::OnBnClickedOk()
 		// リストコントロール2の初期化
 		else if (pRadio_Step->GetCheck())
 		{
-			m_listOutput_StepUp->DeleteColumn(0);
-			m_listOutput_StepUp->DeleteColumn(1);
-			m_listOutput_StepDwn->DeleteColumn(0);
-			m_listOutput_StepDwn->DeleteColumn(1);
+			// Up(立ち上がり)リスト初期化
+			// 既存データがある場合、すべて削除する
+			int stepUpDataCnt = m_listOutput_StepUp->GetItemCount();
+			if (stepUpDataCnt > 0)
+			{
+				for (int i = 0; i < stepUpDataCnt; i++)
+				{
+					m_listOutput_StepUp->DeleteItem(0);
+				}
+			}
+			int columnCount = m_listOutput_StepUp->GetHeaderCtrl()->GetItemCount();
+			for (int i = 0; i < columnCount; i++)
+			{
+				m_listOutput_StepUp->DeleteColumn(0);
+			}
+
+			// Down(立ち下がり)リスト初期化
+			// 既存データがある場合、すべて削除する
+			int stepDwnDataCnt = m_listOutput_StepDwn->GetItemCount();
+			if (stepDwnDataCnt > 0)
+			{
+				for (int i = 0; i < stepDwnDataCnt; i++)
+				{
+					m_listOutput_StepDwn->DeleteItem(0);
+				}
+			}
+			columnCount = m_listOutput_StepDwn->GetHeaderCtrl()->GetItemCount();
+			for (int i = 0; i < columnCount; i++)
+			{
+				m_listOutput_StepDwn->DeleteColumn(0);
+			}
 
 			// 列追加
 			m_listOutput_StepUp->InsertColumn(0, _T("出力設定(%)"), LVCFMT_LEFT, 80);
@@ -1189,4 +1221,12 @@ BOOL CSample3Dlg::PreTranslateMessage(MSG* pMsg)
 		}
 	}
 	return CDialog::PreTranslateMessage(pMsg);
+}
+
+
+void CSample3Dlg::OnLvnItemchangedListOutput2(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMLISTVIEW pNMLV = reinterpret_cast<LPNMLISTVIEW>(pNMHDR);
+	// TODO: ここにコントロール通知ハンドラー コードを追加します。
+	*pResult = 0;
 }
