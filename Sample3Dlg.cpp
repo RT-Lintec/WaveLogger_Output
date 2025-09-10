@@ -251,6 +251,8 @@ BEGIN_MESSAGE_MAP(CSample3Dlg, CDialog)
 	ON_WM_VSCROLL()
 	ON_WM_SIZE()
 	ON_BN_CLICKED(IDC_BUTTON_CP_NONSTEP, &CSample3Dlg::OnBnClickedButtonCpNonstep)
+	ON_BN_CLICKED(IDC_BUTTON_CP_STEP_UP, &CSample3Dlg::OnBnClickedButtonCpStepUp)
+	ON_BN_CLICKED(IDC_BUTTON_CP_STEP_DWN, &CSample3Dlg::OnBnClickedButtonCpStepDwn)
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1528,6 +1530,62 @@ void CSample3Dlg::OnBnClickedButtonCpNonstep()
 		{
 			m_listOutput_NonStep->SetItemState(-1, 0, LVIS_SELECTED);
 			SetClipbored(strText_NonStep);
+		}
+	}
+}
+
+
+void CSample3Dlg::OnBnClickedButtonCpStepUp()
+{
+	POSITION pos_StepUp = 0;
+	CString strText_StepUp;
+	int itemCnt = m_listOutput_StepUp->GetItemCount();
+	// 全行を選択した状態にする
+	for (int i = 0; i < itemCnt; ++i)
+	{
+		m_listOutput_StepUp->SetItemState(i, LVIS_SELECTED, LVIS_SELECTED);
+	}
+	pos_StepUp = m_listOutput_StepUp->GetFirstSelectedItemPosition();
+
+	// テキストデータ取得
+	GetCopyText(m_listOutput_StepUp, pos_StepUp, strText_StepUp);
+
+	// クリップボードにコピー
+	if (OpenClipboard())
+	{
+		// ステップ(立ち上がり)
+		if (strText_StepUp.GetLength() > 0)
+		{
+			m_listOutput_StepUp->SetItemState(-1, 0, LVIS_SELECTED);
+			SetClipbored(strText_StepUp);
+		}
+	}
+}
+
+
+void CSample3Dlg::OnBnClickedButtonCpStepDwn()
+{
+	POSITION pos_StepDwn = 0;
+	CString strText_StepDwn;
+	int itemCnt = m_listOutput_StepDwn->GetItemCount();
+	// 全行を選択した状態にする
+	for (int i = 0; i < itemCnt; ++i)
+	{
+		m_listOutput_StepDwn->SetItemState(i, LVIS_SELECTED, LVIS_SELECTED);
+	}
+	pos_StepDwn = m_listOutput_StepDwn->GetFirstSelectedItemPosition();
+
+	// テキストデータ取得
+	GetCopyText(m_listOutput_StepDwn, pos_StepDwn, strText_StepDwn);
+
+	// クリップボードにコピー
+	if (OpenClipboard())
+	{
+		// ステップ(立ち下がり)
+		if (strText_StepDwn.GetLength() > 0)
+		{
+			m_listOutput_StepDwn->SetItemState(-1, 0, LVIS_SELECTED);
+			SetClipbored(strText_StepDwn);
 		}
 	}
 }
