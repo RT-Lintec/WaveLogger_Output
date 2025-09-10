@@ -56,6 +56,10 @@ protected:
 
 	BOOL PreTranslateMessage(MSG* pMsg);
 
+	afx_msg void OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
+	afx_msg void OnSize(UINT nType, int cx, int cy);
+	//DECLARE_MESSAGE_MAP()
+
 // 構築
 public:
 	CSample3Dlg(CWnd* pParent = NULL);	// 標準のコンストラクタ

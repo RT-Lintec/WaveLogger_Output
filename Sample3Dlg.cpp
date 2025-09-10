@@ -54,6 +54,11 @@ CListCtrl* m_listOutput_StepDwn;
 CButton* pRadio_NonStep;
 CButton* pRadio_Step;
 
+const int vSize = 541;
+int m_nScrollPosY;  // 縦スクロール位置
+int m_nScrollRangeY; // 縦スクロール範囲
+int m_nScrollPageY;  // 縦スクロールページサイズ（表示領域の高さ）
+
 float roundTo(float value, int digits);
 
 /// <summary>
@@ -231,6 +236,8 @@ BEGIN_MESSAGE_MAP(CSample3Dlg, CDialog)
 	ON_BN_CLICKED(IDC_RADIO2, &CSample3Dlg::OnBnClickedRadio2)
 	ON_BN_CLICKED(IDOK, &CSample3Dlg::OnBnClickedOk)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_LIST_OUTPUT2, &CSample3Dlg::OnLvnItemchangedListOutput2)
+	ON_WM_VSCROLL()
+	ON_WM_SIZE()
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -287,6 +294,21 @@ BOOL CSample3Dlg::OnInitDialog()
 		EndDialog(IDABORT);
 		return FALSE;
 	}
+
+	// スクロール位置初期化
+	m_nScrollPosY = 0;
+
+	// 全体のコンテンツの高さ（スクロール可能な高さ）をセット
+	m_nScrollRangeY = vSize; // 例えば1000ピクセル（実際の内容サイズに合わせる）
+
+	// 表示領域の高さを取得してページサイズ設定
+	CRect rect;
+	GetClientRect(&rect);
+	m_nScrollPageY = rect.Height();
+
+	// スクロールバーの範囲とページを設定
+	SetScrollRange(SB_VERT, 0, m_nScrollRangeY - m_nScrollPageY, FALSE);
+	SetScrollPos(SB_VERT, m_nScrollPosY, TRUE);
 
 	return TRUE;  // TRUE を返すとコントロールに設定したフォーカスは失われません。
 }
@@ -1159,41 +1181,114 @@ void CSample3Dlg::OnBnClickedOk()
 /// </summary>
 void CSample3Dlg::CopySelectedItemToClipboard()
 {
-	POSITION pos = m_listOutput_NonStep->GetFirstSelectedItemPosition();
-	if (!pos) return;
+	POSITION pos_NonStep = 0;
+	POSITION pos_StepUp = 0;
+	POSITION pos_StepDwn = 0;
 
-	CString strText;
+	pos_NonStep = m_listOutput_NonStep->GetFirstSelectedItemPosition();
+	pos_StepUp = m_listOutput_StepUp->GetFirstSelectedItemPosition();
+	pos_StepDwn = m_listOutput_StepDwn->GetFirstSelectedItemPosition();
+	if (!pos_NonStep && !pos_StepUp && !pos_StepDwn) return;
 
-	while (pos)
+	CString strText_NonStep, strText_StepUp, strText_StepDwn;
+
+	// 非ステップ
+	while (pos_NonStep)
 	{
-		int index = m_listOutput_NonStep->GetNextSelectedItem(pos);
+		int index = m_listOutput_NonStep->GetNextSelectedItem(pos_NonStep);
 
 		// 各列の値をタブ区切りで取得
 		for (int col = 0; col < m_listOutput_NonStep->GetHeaderCtrl()->GetItemCount(); ++col)
 		{
-			strText += m_listOutput_NonStep->GetItemText(index, col);
+			strText_NonStep += m_listOutput_NonStep->GetItemText(index, col);
 			if (col < m_listOutput_NonStep->GetHeaderCtrl()->GetItemCount() - 1)
-				strText += _T("\t");
+				strText_NonStep += _T("\t");
 		}
-		strText += _T("\r\n");
+		strText_NonStep += _T("\r\n");
+	}
+
+	// ステップ立ち上がり
+	while (pos_StepUp)
+	{
+		int index = m_listOutput_StepUp->GetNextSelectedItem(pos_StepUp);
+
+		// 各列の値をタブ区切りで取得
+		for (int col = 0; col < m_listOutput_StepUp->GetHeaderCtrl()->GetItemCount(); ++col)
+		{
+			strText_StepUp += m_listOutput_StepUp->GetItemText(index, col);
+			if (col < m_listOutput_StepUp->GetHeaderCtrl()->GetItemCount() - 1)
+				strText_StepUp += _T("\t");
+		}
+		strText_StepUp += _T("\r\n");
+	}
+
+	// ステップ立ち下がり
+	while (pos_StepDwn)
+	{
+		int index = m_listOutput_StepDwn->GetNextSelectedItem(pos_StepDwn);
+
+		// 各列の値をタブ区切りで取得
+		for (int col = 0; col < m_listOutput_StepDwn->GetHeaderCtrl()->GetItemCount(); ++col)
+		{
+			strText_StepDwn += m_listOutput_StepDwn->GetItemText(index, col);
+			if (col < m_listOutput_StepDwn->GetHeaderCtrl()->GetItemCount() - 1)
+				strText_StepDwn += _T("\t");
+		}
+		strText_StepDwn += _T("\r\n");
 	}
 
 	// クリップボードにコピー
 	if (OpenClipboard())
 	{
 		EmptyClipboard();
-
-		HGLOBAL hGlob = GlobalAlloc(GMEM_MOVEABLE, (strText.GetLength() + 1) * sizeof(TCHAR));
-		if (hGlob)
+		HGLOBAL hGlob;
+		if (strText_NonStep.GetLength() > 0)
 		{
-			LPTSTR p = (LPTSTR)GlobalLock(hGlob);
-			_tcscpy_s(p, strText.GetLength() + 1, strText);
-			GlobalUnlock(hGlob);
+			m_listOutput_NonStep->SetItemState(-1, 0, LVIS_SELECTED);
+			hGlob = GlobalAlloc(GMEM_MOVEABLE, (strText_NonStep.GetLength() + 1) * sizeof(TCHAR));
+			if (hGlob)
+			{
+				LPTSTR p = (LPTSTR)GlobalLock(hGlob);
+				_tcscpy_s(p, strText_NonStep.GetLength() + 1, strText_NonStep);
+				GlobalUnlock(hGlob);
 #ifdef _UNICODE
-			SetClipboardData(CF_UNICODETEXT, hGlob);
+				SetClipboardData(CF_UNICODETEXT, hGlob);
 #else
-			SetClipboardData(CF_TEXT, hGlob);
+				SetClipboardData(CF_TEXT, hGlob);
 #endif
+			}
+		}
+		else if (strText_StepUp.GetLength() > 0)
+		{
+			m_listOutput_StepUp->SetItemState(-1, 0, LVIS_SELECTED);
+			hGlob = GlobalAlloc(GMEM_MOVEABLE, (strText_StepUp.GetLength() + 1) * sizeof(TCHAR));
+			if (hGlob)
+			{
+				LPTSTR p = (LPTSTR)GlobalLock(hGlob);
+				_tcscpy_s(p, strText_StepUp.GetLength() + 1, strText_StepUp);
+				GlobalUnlock(hGlob);
+#ifdef _UNICODE
+				SetClipboardData(CF_UNICODETEXT, hGlob);
+#else
+				SetClipboardData(CF_TEXT, hGlob);
+#endif
+			}
+		}
+		else if (strText_StepDwn.GetLength() > 0)
+		{
+			m_listOutput_StepDwn->SetItemState(-1, 0, LVIS_SELECTED);
+			hGlob = GlobalAlloc(GMEM_MOVEABLE, (strText_StepDwn.GetLength() + 1) * sizeof(TCHAR));
+			if (hGlob)
+			{
+				LPTSTR p = (LPTSTR)GlobalLock(hGlob);
+				_tcscpy_s(p, strText_StepDwn.GetLength() + 1, strText_StepDwn);
+				GlobalUnlock(hGlob);
+#ifdef _UNICODE
+				SetClipboardData(CF_UNICODETEXT, hGlob);
+#else
+				SetClipboardData(CF_TEXT, hGlob);
+#endif
+			}
 		}
 
 		CloseClipboard();
@@ -1229,4 +1324,82 @@ void CSample3Dlg::OnLvnItemchangedListOutput2(NMHDR* pNMHDR, LRESULT* pResult)
 	LPNMLISTVIEW pNMLV = reinterpret_cast<LPNMLISTVIEW>(pNMHDR);
 	// TODO: ここにコントロール通知ハンドラー コードを追加します。
 	*pResult = 0;
+}
+
+void CSample3Dlg::OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
+{
+	int nNewPos = m_nScrollPosY;
+
+	switch (nSBCode)
+	{
+	case SB_TOP:
+		nNewPos = 0;
+		break;
+	case SB_BOTTOM:
+		nNewPos = m_nScrollRangeY - m_nScrollPageY;
+		break;
+	case SB_LINEUP:
+		nNewPos = max(nNewPos - 10, 0);
+		break;
+	case SB_LINEDOWN:
+		nNewPos = min(nNewPos + 10, m_nScrollRangeY - m_nScrollPageY);
+		break;
+	case SB_PAGEUP:
+		nNewPos = max(nNewPos - m_nScrollPageY, 0);
+		break;
+	case SB_PAGEDOWN:
+		nNewPos = min(nNewPos + m_nScrollPageY, m_nScrollRangeY - m_nScrollPageY);
+		break;
+	case SB_THUMBTRACK:
+		nNewPos = nPos;
+		break;
+	default:
+		break;
+	}
+
+	if (nNewPos != m_nScrollPosY)
+	{
+		ScrollWindow(0, m_nScrollPosY - nNewPos);
+		m_nScrollPosY = nNewPos;
+		SetScrollPos(SB_VERT, m_nScrollPosY, TRUE);
+	}
+
+	// 自分の親クラスのOnVScrollを呼ぶ
+	CDialog::OnVScroll(nSBCode, nPos, pScrollBar);
+}
+
+void CSample3Dlg::OnSize(UINT nType, int cx, int cy)
+{
+	CDialog::OnSize(nType, cx, cy);
+
+	// クライアント領域の高さを更新
+	m_nScrollPageY = cy;
+
+	// 最大スクロール位置（スクロール可能範囲）
+	int nMaxScrollPos = m_nScrollRangeY - m_nScrollPageY;
+	if (nMaxScrollPos < 0) nMaxScrollPos = 0;
+
+	// 現在のスクロール位置がはみ出す場合は補正（←これが重要！）
+	if (m_nScrollPosY > nMaxScrollPos)
+	{
+		int delta = m_nScrollPosY - nMaxScrollPos;
+
+		// 画面を上にスクロールして戻す
+		ScrollWindow(0, delta);
+		m_nScrollPosY = nMaxScrollPos;
+	}
+
+	// スクロールバーの表示・非表示
+	if (nMaxScrollPos > 0)
+	{
+		ShowScrollBar(SB_VERT, TRUE);
+		SetScrollRange(SB_VERT, 0, nMaxScrollPos, FALSE);
+		SetScrollPos(SB_VERT, m_nScrollPosY, TRUE);
+	}
+	else
+	{
+		ShowScrollBar(SB_VERT, FALSE);
+		SetScrollPos(SB_VERT, 0, TRUE);
+		m_nScrollPosY = 0;
+	}
 }
