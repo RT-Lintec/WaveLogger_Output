@@ -55,6 +55,10 @@ CListCtrl* m_listOutput_StepDwn;
 // 出力モードのラジオボタンローカルポインタ
 CButton* pRadio_NonStep;
 CButton* pRadio_Step;
+// データコピーボタン
+CButton* btn_Cp_Nonstep;
+CButton* btn_Cp_StepUp;
+CButton* btn_Cp_StepDwn;
 
 const int hSize = HSIZE;
 const int vSize = VSIZE;
@@ -246,6 +250,7 @@ BEGIN_MESSAGE_MAP(CSample3Dlg, CDialog)
 	ON_WM_HSCROLL()
 	ON_WM_VSCROLL()
 	ON_WM_SIZE()
+	ON_BN_CLICKED(IDC_BUTTON_CP_NONSTEP, &CSample3Dlg::OnBnClickedButtonCpNonstep)
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
@@ -517,6 +522,11 @@ void CSample3Dlg::OnOK()
 
 				m_listOutput_NonStep->SetItemText(index, 1, strValue);
 			}
+			// データコピーボタンを有効化
+			if (!btn_Cp_Nonstep->IsWindowEnabled())
+			{
+				btn_Cp_Nonstep->EnableWindow(TRUE);
+			}
 		}
 		else if (lDataCnt == 0) {
 			// 波形データなし
@@ -546,6 +556,11 @@ void CSample3Dlg::OnOK()
 				strValue.Format(_T("%.3f"), (float)(stepUpResult[i]) / 1000);
 				m_listOutput_StepUp->SetItemText(index, 1, strValue);
 			}
+			// データコピーボタンを有効化
+			if (!btn_Cp_StepUp->IsWindowEnabled())
+			{
+				btn_Cp_StepUp->EnableWindow(TRUE);
+			}
 
 			// リストコントロール3に立ち下がり出力
 			for (int i = 0; i < sizeof(stepDwnResult) / sizeof(stepDwnResult[0]); i++)
@@ -557,6 +572,11 @@ void CSample3Dlg::OnOK()
 				strValue.Format(_T("%.3f"), (float)(stepDwnResult[i]) / 1000);
 				m_listOutput_StepDwn->SetItemText(index, 1, strValue);
 			}
+			// データコピーボタンを有効化
+			if (!btn_Cp_StepDwn->IsWindowEnabled())
+			{
+				btn_Cp_StepDwn->EnableWindow(TRUE);
+			}
 		}
 		else if (lDataCnt == 0) {
 			// 波形データなし
@@ -567,9 +587,6 @@ void CSample3Dlg::OnOK()
 			AfxMessageBox(IDS_ERR_GETWAVEDATA, MB_ICONEXCLAMATION);
 		}
 	}
-
-	// 平均値用バッファバッファ解放
-	delete [] flowOut;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -1103,7 +1120,6 @@ void CSample3Dlg::OnBnClickedRadio2()
 	// TODO: ここにコントロール通知ハンドラー コードを追加します。
 }
 
-
 /// <summary>
 /// 実行ボタンクリック時の操作
 /// 実行前の設定が正しくなされているかをチェックする
@@ -1113,9 +1129,20 @@ void CSample3Dlg::OnBnClickedOk()
 	// 出力モードのラジオボタンローカルポインタ
 	pRadio_NonStep = (CButton*)GetDlgItem(IDC_RADIO1);
 	pRadio_Step = (CButton*)GetDlgItem(IDC_RADIO2);
+
+	// データコピーボタンローカルポインタ
+	btn_Cp_Nonstep = (CButton*)GetDlgItem(IDC_BUTTON_CP_NONSTEP);
+	btn_Cp_StepUp = (CButton*)GetDlgItem(IDC_BUTTON_CP_STEP_UP);
+	btn_Cp_StepDwn = (CButton*)GetDlgItem(IDC_BUTTON_CP_STEP_DWN);
+
+	btn_Cp_Nonstep->EnableWindow(FALSE);
+	btn_Cp_StepUp->EnableWindow(FALSE);
+	btn_Cp_StepDwn->EnableWindow(FALSE);
+
 	m_listOutput_NonStep = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT1);
 	m_listOutput_StepUp = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT2);
 	m_listOutput_StepDwn = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT3);
+
 	
 	// 出力モード選択チェック
 	if (!pRadio_NonStep->GetCheck() && !pRadio_Step->GetCheck())
@@ -1472,5 +1499,35 @@ void CSample3Dlg::OnSize(UINT nType, int cx, int cy)
 		ShowScrollBar(SB_HORZ, FALSE);
 		m_nScrollPosX = 0;
 		SetScrollPos(SB_HORZ, 0, TRUE);
+	}
+}
+
+/// <summary>
+/// データコピーボタン(非ステップ)押下時の処理
+/// </summary>
+void CSample3Dlg::OnBnClickedButtonCpNonstep()
+{
+	POSITION pos_NonStep = 0;
+	CString strText_NonStep;
+	int itemCnt =m_listOutput_NonStep->GetItemCount();
+	// 全行を選択した状態にする
+	for (int i = 0; i < itemCnt; ++i)
+	{
+		m_listOutput_NonStep->SetItemState(i, LVIS_SELECTED, LVIS_SELECTED);
+	}
+	pos_NonStep = m_listOutput_NonStep->GetFirstSelectedItemPosition();
+
+	// テキストデータ取得
+	GetCopyText(m_listOutput_NonStep, pos_NonStep, strText_NonStep);
+	
+	// クリップボードにコピー
+	if (OpenClipboard())
+	{
+		// 非ステップ
+		if (strText_NonStep.GetLength() > 0)
+		{
+			m_listOutput_NonStep->SetItemState(-1, 0, LVIS_SELECTED);
+			SetClipbored(strText_NonStep);
+		}
 	}
 }

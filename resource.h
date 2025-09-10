@@ -30,6 +30,9 @@
 #define IDC_LIST_OUTPUT1                1008
 #define IDC_LIST_OUTPUT2                1009
 #define IDC_LIST_OUTPUT3                1011
+#define IDC_BUTTON_CP_NONSTEP           1012
+#define IDC_BUTTON_CP_STEP_UP           1013
+#define IDC_BUTTON_CP_STEP_DWN          1014
 
 // Next default values for new objects
 // 

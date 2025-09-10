@@ -98,6 +98,7 @@ public:
 	afx_msg void OnBnClickedRadio2();
 	afx_msg void OnBnClickedOk();
 	afx_msg void OnLvnItemchangedListOutput2(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnBnClickedButtonCpNonstep();
 };
 
 //{{AFX_INSERT_LOCATION}}
