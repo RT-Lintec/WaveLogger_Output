@@ -1,6 +1,6 @@
 ﻿cl : コマンド ライン warning D9035: オプション 'Gm' の使用は現在推奨されていません。今後のバージョンからは削除されます。
   Sample3Dlg.cpp
-C:\Users\takahashi\Documents\programs\WaveLoggerOutput\Sample3Dlg.cpp(682,8): warning C4101: 'szWork': ローカル変数は 1 度も使われていません。
-C:\Users\takahashi\Documents\programs\WaveLoggerOutput\Sample3Dlg.cpp(860,8): warning C4101: 'szWork': ローカル変数は 1 度も使われていません。
-C:\Users\takahashi\Documents\programs\WaveLoggerOutput\Sample3Dlg.cpp(1034,15): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
+C:\Users\takahashi\Documents\programs\WaveLoggerOutput\Sample3Dlg.cpp(697,8): warning C4101: 'szWork': ローカル変数は 1 度も使われていません。
+C:\Users\takahashi\Documents\programs\WaveLoggerOutput\Sample3Dlg.cpp(875,8): warning C4101: 'szWork': ローカル変数は 1 度も使われていません。
+C:\Users\takahashi\Documents\programs\WaveLoggerOutput\Sample3Dlg.cpp(1049,15): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
   Sample3.vcxproj -> C:\Users\takahashi\Documents\programs\WaveLoggerOutput\Debug\Sample3.exe

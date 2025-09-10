@@ -491,16 +491,31 @@ void CSample3Dlg::OnOK()
 			// 応答時間データ作成
 			StepResonseTImeOutput(flowOut, mfmOut, lDataCnt, TRUE);
 
-			// リストコントロール2に出力
+			// リストコントロール2に立ち上がり出力
+			for (int i = 0; i < sizeof(stepUpResult) / sizeof(stepUpResult[0]); i++)
+			{
+				CString str;
+				str.Format(_T("%d"), threshold_Step.settingUpPercentage[i]);
+				int index = m_listOutput_StepUp->InsertItem(i, str); // i番目に挿入
 
+				CString strValue;
+				strValue.Format(_T("%.3f"), (float)(stepUpResult[i]) / 1000);  // 小数点3桁まで表示（必要に応じて調整）
 
-			//// CSVファイルに保存
-			//CString strCsvFile(strFilePath, strFilePath.ReverseFind(_T('.')));
-			//strCsvFile += _T(".csv");
-			//if (SaveCsvFile(strCsvFile, TRUE) == ERROR_SUCCESS) {
-			//	// 正常終了
-			//	AfxMessageBox(IDS_COMPLETE_AVERAGE, MB_ICONINFORMATION);
-			//}
+				m_listOutput_StepUp->SetItemText(index, 1, strValue);
+			}
+
+			// リストコントロール3に立ち下がり出力
+			for (int i = 0; i < sizeof(stepDwnResult) / sizeof(stepDwnResult[0]); i++)
+			{
+				CString str;
+				str.Format(_T("%d"), threshold_Step.settingDwnPercentage[i]);
+				int index = m_listOutput_StepDwn->InsertItem(i, str); // i番目に挿入
+
+				CString strValue;
+				strValue.Format(_T("%.3f"), (float)(stepDwnResult[i]) / 1000);  // 小数点3桁まで表示（必要に応じて調整）
+
+				m_listOutput_StepDwn->SetItemText(index, 1, strValue);
+			}
 		}
 		else if (lDataCnt == 0) {
 			// 波形データなし
