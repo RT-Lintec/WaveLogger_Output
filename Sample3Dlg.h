@@ -51,6 +51,11 @@ protected:
 	// ステップ応答時間の出力関数
 	long StepResonseTImeOutput(const float* flowOut, const float* mfmOut, long lDataCnt, BOOL bShowError = FALSE);
 
+	//
+	void CopySelectedItemToClipboard();
+
+	BOOL PreTranslateMessage(MSG* pMsg);
+
 // 構築
 public:
 	CSample3Dlg(CWnd* pParent = NULL);	// 標準のコンストラクタ

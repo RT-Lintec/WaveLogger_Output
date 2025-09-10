@@ -36,7 +36,7 @@ static char THIS_FILE[] = __FILE__;
 #define GET_CHDATA_MAX			1024	// 1チャンネルの波形データ取得最大数
 
 #define MAX_ARRAY_SIZE			1048576 // データ最大数
-#define SUBSTRUCT_THRESHOLD	0.05f
+#define SUBSTRUCT_THRESHOLD		0.05f
 #define PARAM_SIZE				12		// param数
 #define SAMPLE_INTERVAL			4000	// 通常サンプル時間
 #define LONG_SAMPLE_INTERVAL	10000	// 2%上昇時サンプル時間
@@ -78,7 +78,6 @@ struct thresholdSt_Step
 	float threshold_Dwn[12] = { 0.09f ,0.08f ,0.07f ,0.06f ,0.05f ,0.04f ,0.03f ,0.025f, 0.025f ,0.025f ,0.025f, 0.025f };
 	int settingUpPercentage[12] = { 2, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
 	int settingDwnPercentage[12] = { 90, 80, 70, 60, 50, 40, 30, 20, 10, 5, 2, 0 };
-
 };
 thresholdSt_Step threshold_Step;
 
@@ -460,26 +459,21 @@ void CSample3Dlg::OnOK()
 			for (int i = 0; i < sizeof(nonStepResult) / sizeof(nonStepResult[0]); i++)
 			{
 				CString str;
-				str.Format(_T("%d"), i);
+				if (i % 2 == 0)
+				{
+					str.Format(_T("%d"), threshold_NonStep.settingPercentage[i / 2]);
+				}
+				else
+				{
+					str.Format(_T("%d"), 0);
+				}
 				int index = m_listOutput_NonStep->InsertItem(i, str); // i番目に挿入
 
 				CString strValue;
 				strValue.Format(_T("%.3f"), (float)(nonStepResult[i])/1000);  // 小数点3桁まで表示（必要に応じて調整）
 
 				m_listOutput_NonStep->SetItemText(index, 1, strValue);
-
-				//m_listOutput_NonStep->InsertColumn(0, _T("出力設定(%)"), LVCFMT_LEFT, 80);
-				//m_listOutput_NonStep->InsertColumn(1, _T("出力時間(msec)"), LVCFMT_LEFT, 100);
 			}
-
-
-			//// CSVファイルに保存
-			//CString strCsvFile(strFilePath, strFilePath.ReverseFind(_T('.')));
-			//strCsvFile += _T(".csv");
-			//if (SaveCsvFile(strCsvFile, TRUE) == ERROR_SUCCESS) {
-			//	// 正常終了
-			//	AfxMessageBox(IDS_COMPLETE_AVERAGE, MB_ICONINFORMATION);
-			//}
 		}
 		else if (lDataCnt == 0) {
 			// 波形データなし
@@ -1066,7 +1060,7 @@ void CSample3Dlg::OnBnClickedOk()
 	m_listOutput_NonStep = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT1);
 	m_listOutput_StepUp = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT2);
 	m_listOutput_StepDwn = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT3);
-
+	
 	// 出力モード選択チェック
 	if (!pRadio_NonStep->GetCheck() && !pRadio_Step->GetCheck())
 	{
@@ -1077,6 +1071,18 @@ void CSample3Dlg::OnBnClickedOk()
 		// リストコントロール1の初期化
 		if (pRadio_NonStep->GetCheck())
 		{
+			// 既存データがある場合、すべて削除する
+			int nonStepDataCnt = m_listOutput_NonStep->GetItemCount();
+			if (nonStepDataCnt > 0)
+			{
+				for (int i = 0; i < nonStepDataCnt; i++)
+				{
+					m_listOutput_NonStep->DeleteItem(i);
+					// 実際の0インデクスデータ数よりも多く消しているが、エラーないので放置
+					m_listOutput_NonStep->DeleteItem(0);
+				}
+			}
+
 			m_listOutput_NonStep->DeleteColumn(0);
 			m_listOutput_NonStep->DeleteColumn(1);
 
@@ -1101,4 +1107,73 @@ void CSample3Dlg::OnBnClickedOk()
 
 		CSample3Dlg::OnOK();
 	}
+}
+
+/// <summary>
+/// 非リニア　リストボックス上の選択行をコピーする
+/// </summary>
+void CSample3Dlg::CopySelectedItemToClipboard()
+{
+	POSITION pos = m_listOutput_NonStep->GetFirstSelectedItemPosition();
+	if (!pos) return;
+
+	CString strText;
+
+	while (pos)
+	{
+		int index = m_listOutput_NonStep->GetNextSelectedItem(pos);
+
+		// 各列の値をタブ区切りで取得
+		for (int col = 0; col < m_listOutput_NonStep->GetHeaderCtrl()->GetItemCount(); ++col)
+		{
+			strText += m_listOutput_NonStep->GetItemText(index, col);
+			if (col < m_listOutput_NonStep->GetHeaderCtrl()->GetItemCount() - 1)
+				strText += _T("\t");
+		}
+		strText += _T("\r\n");
+	}
+
+	// クリップボードにコピー
+	if (OpenClipboard())
+	{
+		EmptyClipboard();
+
+		HGLOBAL hGlob = GlobalAlloc(GMEM_MOVEABLE, (strText.GetLength() + 1) * sizeof(TCHAR));
+		if (hGlob)
+		{
+			LPTSTR p = (LPTSTR)GlobalLock(hGlob);
+			_tcscpy_s(p, strText.GetLength() + 1, strText);
+			GlobalUnlock(hGlob);
+#ifdef _UNICODE
+			SetClipboardData(CF_UNICODETEXT, hGlob);
+#else
+			SetClipboardData(CF_TEXT, hGlob);
+#endif
+		}
+
+		CloseClipboard();
+	}
+}
+
+/// <summary>
+/// MFC の組み込みメンバー関数(CWnd クラスに定義されている仮想関数)
+/// CSample3Dlg->CDialog->CWndの順に継承しているので実装可能
+/// メッセージがウィンドウプロシージャに送られる前に一度通る処理
+/// </summary>
+BOOL CSample3Dlg::PreTranslateMessage(MSG* pMsg)
+{
+	// キー押下
+	if (pMsg->message == WM_KEYDOWN)
+	{
+		// Ctrl + Cならコピー処理へ
+		// GetKeyState(VK_CONTROL) は Ctrlキーの状態を返し、上位ビットが立っていれば押されている
+		// GetKeyState(VK_XXX) & 0x8000 で そのキーが押されているかチェック
+		// pMsg->wParamでどのキーのメッセージか判定
+		if ((GetKeyState(VK_CONTROL) & 0x8000) && pMsg->wParam == 'C')
+		{
+			CopySelectedItemToClipboard();
+			return TRUE; // 処理済み
+		}
+	}
+	return CDialog::PreTranslateMessage(pMsg);
 }
