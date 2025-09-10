@@ -20,7 +20,6 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-
 #define UNITID_NULL				(0x00)	// 無効値
 #define UNITID_TH				(0x81)	// THユニット
 #define UNITID_HA				(0x82)	// HAユニット
@@ -42,6 +41,9 @@ static char THIS_FILE[] = __FILE__;
 #define LONG_SAMPLE_INTERVAL	10000	// 2%上昇時サンプル時間
 #define FIFTY_CHECK_INTERVAL	50		// 50msecカウント用
 #define ARRAY_OFFSET			10		// FlowOutの現在位置からのオフセット(立ち上がり時にのみ利用するが、大きさに注意)
+#define HSIZE					950		// 横サイズ閾値
+#define VSIZE					550		// 縦サイズ閾値
+
 
 int nonStepResult[PARAM_SIZE * 2]; // 12*2通りのデータ数
 int stepUpResult[PARAM_SIZE]; // ステップ上昇時のデータ
@@ -54,14 +56,15 @@ CListCtrl* m_listOutput_StepDwn;
 CButton* pRadio_NonStep;
 CButton* pRadio_Step;
 
-const int hSize = 950;
-const int vSize = 550;
-int m_nScrollPosX;     // 横スクロール位置
-int m_nScrollRangeX;   // コンテンツ全体の幅
-int m_nScrollPageX;    // 横スクロールページサイズ（表示領域の幅）
-int m_nScrollPosY;  // 縦スクロール位置
+const int hSize = HSIZE;
+const int vSize = VSIZE;
+
+int m_nScrollPosX; // 横スクロール位置
+int m_nScrollRangeX; // コンテンツ全体の幅
+int m_nScrollPageX; // 横スクロールページサイズ（表示領域の幅）
+int m_nScrollPosY; // 縦スクロール位置
 int m_nScrollRangeY; // 縦スクロール範囲
-int m_nScrollPageY;  // 縦スクロールページサイズ（表示領域の高さ）
+int m_nScrollPageY; // 縦スクロールページサイズ（表示領域の高さ）
 
 float roundTo(float value, int digits);
 
@@ -313,9 +316,6 @@ BOOL CSample3Dlg::OnInitDialog()
 	m_nScrollPageX = rect.Width();
 	m_nScrollPageY = rect.Height();
 
-	// スクロールバーの範囲とページを設定
-	//SetScrollRange(SB_VERT, 0, m_nScrollRangeY - m_nScrollPageY, FALSE);
-	//SetScrollPos(SB_VERT, m_nScrollPosY, TRUE);
 	// 垂直スクロール
 	if (m_nScrollRangeY > m_nScrollPageY)
 	{
@@ -707,7 +707,7 @@ long CSample3Dlg::GetMFCDataArray(CXdtDocument2* pXdtDoc, VARIANT& vntArray, flo
 		if (lGetCount < GET_CHDATA_MAX) {
 			break;
 		}
-	} // for (long lDataCnt = 0; lDataCnt < lDataMax; )
+	}
 
 	return lDataCnt;
 }
@@ -1212,107 +1212,89 @@ void CSample3Dlg::CopySelectedItemToClipboard()
 
 	CString strText_NonStep, strText_StepUp, strText_StepDwn;
 
+	// テキストデータ取得
 	// 非ステップ
-	while (pos_NonStep)
+	if (pos_NonStep)
 	{
-		int index = m_listOutput_NonStep->GetNextSelectedItem(pos_NonStep);
-
-		// 各列の値をタブ区切りで取得
-		for (int col = 0; col < m_listOutput_NonStep->GetHeaderCtrl()->GetItemCount(); ++col)
-		{
-			strText_NonStep += m_listOutput_NonStep->GetItemText(index, col);
-			if (col < m_listOutput_NonStep->GetHeaderCtrl()->GetItemCount() - 1)
-				strText_NonStep += _T("\t");
-		}
-		strText_NonStep += _T("\r\n");
+		GetCopyText(m_listOutput_NonStep, pos_NonStep, strText_NonStep);
 	}
-
 	// ステップ立ち上がり
-	while (pos_StepUp)
+	else if (pos_StepUp)
 	{
-		int index = m_listOutput_StepUp->GetNextSelectedItem(pos_StepUp);
-
-		// 各列の値をタブ区切りで取得
-		for (int col = 0; col < m_listOutput_StepUp->GetHeaderCtrl()->GetItemCount(); ++col)
-		{
-			strText_StepUp += m_listOutput_StepUp->GetItemText(index, col);
-			if (col < m_listOutput_StepUp->GetHeaderCtrl()->GetItemCount() - 1)
-				strText_StepUp += _T("\t");
-		}
-		strText_StepUp += _T("\r\n");
+		GetCopyText(m_listOutput_StepUp, pos_StepUp, strText_StepUp);
 	}
-
 	// ステップ立ち下がり
-	while (pos_StepDwn)
+	else if (pos_StepDwn)
 	{
-		int index = m_listOutput_StepDwn->GetNextSelectedItem(pos_StepDwn);
-
-		// 各列の値をタブ区切りで取得
-		for (int col = 0; col < m_listOutput_StepDwn->GetHeaderCtrl()->GetItemCount(); ++col)
-		{
-			strText_StepDwn += m_listOutput_StepDwn->GetItemText(index, col);
-			if (col < m_listOutput_StepDwn->GetHeaderCtrl()->GetItemCount() - 1)
-				strText_StepDwn += _T("\t");
-		}
-		strText_StepDwn += _T("\r\n");
+		GetCopyText(m_listOutput_StepDwn, pos_StepDwn, strText_StepDwn);
 	}
 
 	// クリップボードにコピー
 	if (OpenClipboard())
 	{
-		EmptyClipboard();
-		HGLOBAL hGlob;
+		// 非ステップ
 		if (strText_NonStep.GetLength() > 0)
 		{
 			m_listOutput_NonStep->SetItemState(-1, 0, LVIS_SELECTED);
-			hGlob = GlobalAlloc(GMEM_MOVEABLE, (strText_NonStep.GetLength() + 1) * sizeof(TCHAR));
-			if (hGlob)
-			{
-				LPTSTR p = (LPTSTR)GlobalLock(hGlob);
-				_tcscpy_s(p, strText_NonStep.GetLength() + 1, strText_NonStep);
-				GlobalUnlock(hGlob);
-#ifdef _UNICODE
-				SetClipboardData(CF_UNICODETEXT, hGlob);
-#else
-				SetClipboardData(CF_TEXT, hGlob);
-#endif
-			}
+			SetClipbored(strText_NonStep);
 		}
+		// ステップ立ち上がり
 		else if (strText_StepUp.GetLength() > 0)
 		{
 			m_listOutput_StepUp->SetItemState(-1, 0, LVIS_SELECTED);
-			hGlob = GlobalAlloc(GMEM_MOVEABLE, (strText_StepUp.GetLength() + 1) * sizeof(TCHAR));
-			if (hGlob)
-			{
-				LPTSTR p = (LPTSTR)GlobalLock(hGlob);
-				_tcscpy_s(p, strText_StepUp.GetLength() + 1, strText_StepUp);
-				GlobalUnlock(hGlob);
-#ifdef _UNICODE
-				SetClipboardData(CF_UNICODETEXT, hGlob);
-#else
-				SetClipboardData(CF_TEXT, hGlob);
-#endif
-			}
+			SetClipbored(strText_StepUp);
 		}
+		// ステップ立ち下がり
 		else if (strText_StepDwn.GetLength() > 0)
 		{
 			m_listOutput_StepDwn->SetItemState(-1, 0, LVIS_SELECTED);
-			hGlob = GlobalAlloc(GMEM_MOVEABLE, (strText_StepDwn.GetLength() + 1) * sizeof(TCHAR));
-			if (hGlob)
-			{
-				LPTSTR p = (LPTSTR)GlobalLock(hGlob);
-				_tcscpy_s(p, strText_StepDwn.GetLength() + 1, strText_StepDwn);
-				GlobalUnlock(hGlob);
-#ifdef _UNICODE
-				SetClipboardData(CF_UNICODETEXT, hGlob);
-#else
-				SetClipboardData(CF_TEXT, hGlob);
-#endif
-			}
+			SetClipbored(strText_StepDwn);
 		}
-
-		CloseClipboard();
 	}
+}
+
+/// <summary>
+/// リストコントロールからテキストを取得する
+/// </summary>
+void CSample3Dlg::GetCopyText(CListCtrl* cCtr, POSITION pos, CString& str)
+{
+	while (pos)
+	{
+		int index = cCtr->GetNextSelectedItem(pos);
+
+		// 各列の値をタブ区切りで取得
+		for (int col = 0; col < cCtr->GetHeaderCtrl()->GetItemCount(); ++col)
+		{
+			str += cCtr->GetItemText(index, col);
+			if (col < cCtr->GetHeaderCtrl()->GetItemCount() - 1)
+				str += _T("\t");
+		}
+		str += _T("\r\n");
+	}
+}
+
+/// <summary>
+/// クリップボードを初期化し、テキストをコピーする
+/// </summary>
+void CSample3Dlg::SetClipbored(CString str)
+{
+	EmptyClipboard();
+	HGLOBAL hGlob;
+	m_listOutput_StepUp->SetItemState(-1, 0, LVIS_SELECTED);
+	hGlob = GlobalAlloc(GMEM_MOVEABLE, (str.GetLength() + 1) * sizeof(TCHAR));
+	if (hGlob)
+	{
+		LPTSTR p = (LPTSTR)GlobalLock(hGlob);
+		_tcscpy_s(p, str.GetLength() + 1, str);
+		GlobalUnlock(hGlob);
+#ifdef _UNICODE
+		SetClipboardData(CF_UNICODETEXT, hGlob);
+#else
+		SetClipboardData(CF_TEXT, hGlob);
+#endif
+	}
+
+	CloseClipboard();
 }
 
 /// <summary>
@@ -1338,7 +1320,6 @@ BOOL CSample3Dlg::PreTranslateMessage(MSG* pMsg)
 	return CDialog::PreTranslateMessage(pMsg);
 }
 
-
 void CSample3Dlg::OnLvnItemchangedListOutput2(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	LPNMLISTVIEW pNMLV = reinterpret_cast<LPNMLISTVIEW>(pNMHDR);
@@ -1346,6 +1327,12 @@ void CSample3Dlg::OnLvnItemchangedListOutput2(NMHDR* pNMHDR, LRESULT* pResult)
 	*pResult = 0;
 }
 
+/// <summary>
+/// 横方向スクロール時の処理
+/// </summary>
+/// <param name="nSBCode"></param>
+/// <param name="nPos"></param>
+/// <param name="pScrollBar"></param>
 void CSample3Dlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 {
 	int nNewPos = m_nScrollPosX;
@@ -1382,6 +1369,12 @@ void CSample3Dlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 	CDialog::OnHScroll(nSBCode, nPos, pScrollBar);
 }
 
+/// <summary>
+/// 縦方向スクロール時の処理
+/// </summary>
+/// <param name="nSBCode"></param>
+/// <param name="nPos"></param>
+/// <param name="pScrollBar"></param>
 void CSample3Dlg::OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 {
 	int nNewPos = m_nScrollPosY;
@@ -1424,14 +1417,20 @@ void CSample3Dlg::OnVScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 	CDialog::OnVScroll(nSBCode, nPos, pScrollBar);
 }
 
+/// <summary>
+/// ダイアログサイズ変更時の処理
+/// </summary>
+/// <param name="nType"></param>
+/// <param name="cx"></param>
+/// <param name="cy"></param>
 void CSample3Dlg::OnSize(UINT nType, int cx, int cy)
 {
 	CDialog::OnSize(nType, cx, cy);
 
 	if (cx <= 0 || cy <= 0) return;
 
-	m_nScrollPageY = cy;
 	m_nScrollPageX = cx;
+	m_nScrollPageY = cy;	
 
 	// 縦スクロール範囲
 	int nMaxScrollY = max(0, m_nScrollRangeY - m_nScrollPageY);
