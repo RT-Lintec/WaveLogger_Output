@@ -29,7 +29,7 @@
 #define IDC_LIST0                       1007
 #define IDC_LIST_OUTPUT1                1008
 #define IDC_LIST_OUTPUT2                1009
-#define IDC_LIST_OUTPUT3                1010
+#define IDC_LIST_OUTPUT3                1011
 
 // Next default values for new objects
 // 

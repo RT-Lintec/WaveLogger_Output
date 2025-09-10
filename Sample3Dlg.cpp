@@ -47,8 +47,13 @@ int nonStepResult[PARAM_SIZE * 2]; // 12*2通りのデータ数
 int stepUpResult[PARAM_SIZE]; // ステップ上昇時のデータ
 int stepDwnResult[PARAM_SIZE]; // ステップ下昇時のデータ
 
-CListCtrl* m_listOutput1;
-CListCtrl* m_listOutput2;
+CListCtrl* m_listOutput_NonStep;
+CListCtrl* m_listOutput_StepUp;
+CListCtrl* m_listOutput_StepDwn;
+// 出力モードのラジオボタンローカルポインタ
+CButton* pRadio_NonStep;
+CButton* pRadio_Step;
+
 float roundTo(float value, int digits);
 
 /// <summary>
@@ -58,6 +63,7 @@ struct thresholdSt_NonStep
 {
 	float volt[13] = { 5.0f, 4.5f, 4.0f, 3.5f, 3.0f, 2.5f, 2.0f, 1.5f, 1.0f, 0.5f, 0.25f, 0.1f, 0.0f };
 	float threshold[13] = { 0.1f ,0.09f ,0.08f ,0.07f ,0.06f ,0.05f ,0.04f ,0.03f ,0.025f ,0.025f ,0.025f ,0.025f, 0.025f };
+	int settingPercentage[13] = {100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 5, 2, 0};
 };
 thresholdSt_NonStep threshold_NonStep;
 
@@ -70,6 +76,9 @@ struct thresholdSt_Step
 	float volt_Dwn[12] = { 4.5f, 4.0f, 3.5f, 3.0f, 2.5f, 2.0f, 1.5f, 1.0f, 0.5f, 0.25f, 0.1f, 0.0f };
 	float threshold_Up[12] = { 0.025f ,0.025f ,0.025f, 0.025f, 0.03f, 0.04f, 0.05f, 0.06f, 0.07f, 0.08f, 0.09f, 0.1f };
 	float threshold_Dwn[12] = { 0.09f ,0.08f ,0.07f ,0.06f ,0.05f ,0.04f ,0.03f ,0.025f, 0.025f ,0.025f ,0.025f, 0.025f };
+	int settingUpPercentage[12] = { 2, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
+	int settingDwnPercentage[12] = { 90, 80, 70, 60, 50, 40, 30, 20, 10, 5, 2, 0 };
+
 };
 thresholdSt_Step threshold_Step;
 
@@ -447,13 +456,30 @@ void CSample3Dlg::OnOK()
 			// 応答時間データ作成
 			NonStepResonseTImeOutput(flowOut, mfmOut, lDataCnt, TRUE);
 
-			// CSVファイルに保存
-			CString strCsvFile(strFilePath, strFilePath.ReverseFind(_T('.')));
-			strCsvFile += _T(".csv");
-			if (SaveCsvFile(strCsvFile, TRUE) == ERROR_SUCCESS) {
-				// 正常終了
-				AfxMessageBox(IDS_COMPLETE_AVERAGE, MB_ICONINFORMATION);
+			// リストコントロール1に出力
+			for (int i = 0; i < sizeof(nonStepResult) / sizeof(nonStepResult[0]); i++)
+			{
+				CString str;
+				str.Format(_T("%d"), i);
+				int index = m_listOutput_NonStep->InsertItem(i, str); // i番目に挿入
+
+				CString strValue;
+				strValue.Format(_T("%.3f"), (float)(nonStepResult[i])/1000);  // 小数点3桁まで表示（必要に応じて調整）
+
+				m_listOutput_NonStep->SetItemText(index, 1, strValue);
+
+				//m_listOutput_NonStep->InsertColumn(0, _T("出力設定(%)"), LVCFMT_LEFT, 80);
+				//m_listOutput_NonStep->InsertColumn(1, _T("出力時間(msec)"), LVCFMT_LEFT, 100);
 			}
+
+
+			//// CSVファイルに保存
+			//CString strCsvFile(strFilePath, strFilePath.ReverseFind(_T('.')));
+			//strCsvFile += _T(".csv");
+			//if (SaveCsvFile(strCsvFile, TRUE) == ERROR_SUCCESS) {
+			//	// 正常終了
+			//	AfxMessageBox(IDS_COMPLETE_AVERAGE, MB_ICONINFORMATION);
+			//}
 		}
 		else if (lDataCnt == 0) {
 			// 波形データなし
@@ -471,13 +497,16 @@ void CSample3Dlg::OnOK()
 			// 応答時間データ作成
 			StepResonseTImeOutput(flowOut, mfmOut, lDataCnt, TRUE);
 
-			// CSVファイルに保存
-			CString strCsvFile(strFilePath, strFilePath.ReverseFind(_T('.')));
-			strCsvFile += _T(".csv");
-			if (SaveCsvFile(strCsvFile, TRUE) == ERROR_SUCCESS) {
-				// 正常終了
-				AfxMessageBox(IDS_COMPLETE_AVERAGE, MB_ICONINFORMATION);
-			}
+			// リストコントロール2に出力
+
+
+			//// CSVファイルに保存
+			//CString strCsvFile(strFilePath, strFilePath.ReverseFind(_T('.')));
+			//strCsvFile += _T(".csv");
+			//if (SaveCsvFile(strCsvFile, TRUE) == ERROR_SUCCESS) {
+			//	// 正常終了
+			//	AfxMessageBox(IDS_COMPLETE_AVERAGE, MB_ICONINFORMATION);
+			//}
 		}
 		else if (lDataCnt == 0) {
 			// 波形データなし
@@ -1031,10 +1060,12 @@ void CSample3Dlg::OnBnClickedRadio2()
 /// </summary>
 void CSample3Dlg::OnBnClickedOk()
 {
-	// 出力モードのラジオボタンアクセスポインタ
-	CButton* pRadio_NonStep = (CButton*)GetDlgItem(IDC_RADIO1);
-	CButton* pRadio_Step = (CButton*)GetDlgItem(IDC_RADIO2);
-	m_listOutput1 = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT1);
+	// 出力モードのラジオボタンローカルポインタ
+	pRadio_NonStep = (CButton*)GetDlgItem(IDC_RADIO1);
+	pRadio_Step = (CButton*)GetDlgItem(IDC_RADIO2);
+	m_listOutput_NonStep = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT1);
+	m_listOutput_StepUp = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT2);
+	m_listOutput_StepDwn = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT3);
 
 	// 出力モード選択チェック
 	if (!pRadio_NonStep->GetCheck() && !pRadio_Step->GetCheck())
@@ -1043,14 +1074,31 @@ void CSample3Dlg::OnBnClickedOk()
 	}
 	else
 	{
-		// リストコントロールの初期化
-		m_listOutput1->DeleteColumn(0);
-		m_listOutput1->DeleteColumn(1);
-		
-		// TODO 非ステップとステップでリスト構造を分ける？
-		// リストコントロールの列追加
-		m_listOutput1->InsertColumn(0, _T("出力No"), LVCFMT_LEFT, 80);
-		m_listOutput1->InsertColumn(1, _T("出力時間"), LVCFMT_LEFT, 100);
+		// リストコントロール1の初期化
+		if (pRadio_NonStep->GetCheck())
+		{
+			m_listOutput_NonStep->DeleteColumn(0);
+			m_listOutput_NonStep->DeleteColumn(1);
+
+			// 列追加
+			m_listOutput_NonStep->InsertColumn(0, _T("出力設定(%)"), LVCFMT_LEFT, 80);
+			m_listOutput_NonStep->InsertColumn(1, _T("出力時間(msec)"), LVCFMT_LEFT, 100);
+		}
+		// リストコントロール2の初期化
+		else if (pRadio_Step->GetCheck())
+		{
+			m_listOutput_StepUp->DeleteColumn(0);
+			m_listOutput_StepUp->DeleteColumn(1);
+			m_listOutput_StepDwn->DeleteColumn(0);
+			m_listOutput_StepDwn->DeleteColumn(1);
+
+			// 列追加
+			m_listOutput_StepUp->InsertColumn(0, _T("出力設定(%)"), LVCFMT_LEFT, 80);
+			m_listOutput_StepUp->InsertColumn(1, _T("出力時間(msec)"), LVCFMT_LEFT, 100);
+			m_listOutput_StepDwn->InsertColumn(0, _T("出力設定(%)"), LVCFMT_LEFT, 80);
+			m_listOutput_StepDwn->InsertColumn(1, _T("出力時間(msec)"), LVCFMT_LEFT, 100);
+		}
+
 		CSample3Dlg::OnOK();
 	}
 }
