@@ -11,7 +11,7 @@
 #endif // _MSC_VER > 1000
 
 #define VC_EXTRALEAN		// Windows ヘッダーから殆ど使用されないスタッフを除外します。
-
+#include <functional>
 #include <afxwin.h>         // MFC のコアおよび標準コンポーネント
 #include <afxext.h>         // MFC の拡張部分
 #include <afxdisp.h>        // MFC のオートメーション クラス

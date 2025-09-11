@@ -766,170 +766,60 @@ long CSample3Dlg::GetMFCDataArray(CXdtDocument2* pXdtDoc, VARIANT& vntArray, flo
 	// FLowOut, MFMOutのユニットが同じ場合
 	if (flowUnitNo == mfmUnitNo)
 	{
-		int unitNo = flowUnitNo;
-		for (lDataCnt = 0; lDataCnt < lDataMax; ) {
-			// ユニットnのチャンネル0～のデータを取得
-			long lGetCount = -1;
-			for (long lChannel = 0; lChannel < HA_CHNUM_MAX; lChannel++) {
-				long lResult = pXdtDoc->GetArrayData(unitNo, lChannel, lDataCnt, GET_CHDATA_MAX,
-					vntArray, GET_CHDATA_MAX * lChannel);
-				if (lResult > 0) {
-					abValidChannel[lChannel] = TRUE;
-					lGetCount = lResult;
-				}
-				else {
-					abValidChannel[lChannel] = FALSE;
-				}
-			}
-			// ユニットにデータが存在しない
-			if (lGetCount < 0) {
+		lDataCnt = GetChannelData(pXdtDoc,vntArray,flowUnitNo,flowOut,flowChNo,
+			[]() -> int {
 				AfxMessageBox(IDS_NODATA_UNIT, MB_ICONEXCLAMATION);
 				return -1;
-			}
+			}, &fCnt);
 
-			// FlowOut(0), MFMOut(2) 
-			// pfDatはSAFEARRAYが管理しているバッファへの直接ポインタなので、解放不要
-			float* pfData;
-			SafeArrayAccessData(*vntArray.pparray, (void**)&pfData);
-			for (long lIndex = 0; lIndex < lGetCount; lIndex++, lDataCnt++) {
-				flowOut[lDataCnt] = 0.;
-				for (long lChannel = 0; lChannel < HA_CHNUM_MAX; lChannel++) {
-					// flowOut
-					if (lChannel == flowChNo)
-					{
-						// 無効値は飛ばす
-						if (abValidChannel[lChannel] && pfData[GET_CHDATA_MAX * lChannel + lIndex] != FLT_MAX) {
-							flowOut[lDataCnt] = pfData[GET_CHDATA_MAX * lChannel + lIndex];
-							fCnt++;
-						}
-					}
-
-					// mfmOut
-					if (lChannel == mfmChNo)
-					{
-						// 無効値は飛ばす
-						if (abValidChannel[lChannel] && pfData[GET_CHDATA_MAX * lChannel + lIndex] != FLT_MAX) {
-							mfmOut[lDataCnt] = pfData[GET_CHDATA_MAX * lChannel + lIndex];
-							mCnt++;
-						}
-					}
-				}
-			}
-
-			//delete pfData;
-			SafeArrayUnaccessData(*vntArray.pparray);
-
-			if (lGetCount < GET_CHDATA_MAX) {
-				break;
-			}
+		if (lDataCnt != -1)
+		{
+			GetChannelData(pXdtDoc, vntArray, mfmUnitNo, mfmOut, mfmChNo,
+				[]() -> int {
+					AfxMessageBox(IDS_NODATA_UNIT, MB_ICONEXCLAMATION);
+					return -1;
+				}, &mCnt);
+		}
+		else
+		{
+			return lDataCnt;
 		}
 	}
 	// FLowOut, MFMOutのユニットが異なる場合
 	else
 	{
-		// FlowUnit処理
-		for (lDataCnt = 0; lDataCnt < lDataMax; ) {
-			// ユニットnのチャンネル0～のデータを取得
-			long lGetCount = -1;
-			for (long lChannel = 0; lChannel < HA_CHNUM_MAX; lChannel++) {
-				long lResult = pXdtDoc->GetArrayData(flowUnitNo, lChannel, lDataCnt, GET_CHDATA_MAX,
-					vntArray, GET_CHDATA_MAX * lChannel);
-				if (lResult > 0) {
-					abValidChannel[lChannel] = TRUE;
-					lGetCount = lResult;
-				}
-				else {
-					abValidChannel[lChannel] = FALSE;
-				}
-			}
-			// ユニットにデータが存在しない
-			if (lGetCount < 0) {
+		int fDataCnt = GetChannelData(pXdtDoc, vntArray, flowUnitNo, flowOut, flowChNo,
+			[]() -> int {
 				CString msg;
 				CString noDataMsg;
 				noDataMsg.LoadString(IDS_NODATA_UNIT);
 				msg.Format(_T("FlowOutで%s"), noDataMsg);
 				AfxMessageBox(msg, MB_ICONEXCLAMATION);
-				//AfxMessageBox(IDS_NODATA_UNIT, MB_ICONEXCLAMATION);
+				return -1;
+			}, &fCnt);
+		if (fDataCnt != -1)
+		{
+			int mDataCnt = GetChannelData(pXdtDoc, vntArray, mfmUnitNo, mfmOut, mfmChNo,
+				[]() -> int {
+					CString msg;
+					CString noDataMsg;
+					noDataMsg.LoadString(IDS_NODATA_UNIT);
+					msg.Format(_T("mfmOutで%s"), noDataMsg);
+					AfxMessageBox(msg, MB_ICONEXCLAMATION);
+					return -1;
+				}, &mCnt);
+			if (mDataCnt == -1)
+			{
 				return -1;
 			}
-
-			// FlowOut(0), MFMOut(2) 
-			// pfDatはSAFEARRAYが管理しているバッファへの直接ポインタなので、解放不要
-			float* pfData;
-			SafeArrayAccessData(*vntArray.pparray, (void**)&pfData);
-			for (long lIndex = 0; lIndex < lGetCount; lIndex++, lDataCnt++) {
-				flowOut[lDataCnt] = 0.;
-				for (long lChannel = 0; lChannel < HA_CHNUM_MAX; lChannel++) {
-					// flowOut
-					if (lChannel == flowChNo)
-					{
-						// 無効値は飛ばす
-						if (abValidChannel[lChannel] && pfData[GET_CHDATA_MAX * lChannel + lIndex] != FLT_MAX) {
-							flowOut[lDataCnt] = pfData[GET_CHDATA_MAX * lChannel + lIndex];
-							fCnt++;
-						}
-					}
-				}
-			}
-
-			//delete pfData;
-			SafeArrayUnaccessData(*vntArray.pparray);
-
-			if (lGetCount < GET_CHDATA_MAX) {
-				break;
+			else
+			{
+				lDataCnt = fDataCnt + mDataCnt;
 			}
 		}
-
-		// MFMUnit処理
-		for (lDataCnt = 0; lDataCnt < lDataMax; ) {
-			// ユニットnのチャンネル0～のデータを取得
-			long lGetCount = -1;
-			for (long lChannel = 0; lChannel < HA_CHNUM_MAX; lChannel++) {
-				long lResult = pXdtDoc->GetArrayData(mfmUnitNo, lChannel, lDataCnt, GET_CHDATA_MAX,
-					vntArray, GET_CHDATA_MAX * lChannel);
-				if (lResult > 0) {
-					abValidChannel[lChannel] = TRUE;
-					lGetCount = lResult;
-				}
-				else {
-					abValidChannel[lChannel] = FALSE;
-				}
-			}
-			// ユニットにデータが存在しない
-			if (lGetCount < 0) {
-				CString msg;
-				CString noDataMsg;
-				noDataMsg.LoadString(IDS_NODATA_UNIT);
-				msg.Format(_T("mfmOutで%s"), noDataMsg);
-				AfxMessageBox(msg, MB_ICONEXCLAMATION);
-				return -1;
-			}
-
-			// FlowOut(0), MFMOut(2) 
-			// pfDatはSAFEARRAYが管理しているバッファへの直接ポインタなので、解放不要
-			float* pfData;
-			SafeArrayAccessData(*vntArray.pparray, (void**)&pfData);
-			for (long lIndex = 0; lIndex < lGetCount; lIndex++, lDataCnt++) {
-				mfmOut[lDataCnt] = 0.;
-				for (long lChannel = 0; lChannel < HA_CHNUM_MAX; lChannel++) {
-					// flowOut
-					if (lChannel == mfmChNo)
-					{
-						// 無効値は飛ばす
-						if (abValidChannel[lChannel] && pfData[GET_CHDATA_MAX * lChannel + lIndex] != FLT_MAX) {
-							mfmOut[lDataCnt] = pfData[GET_CHDATA_MAX * lChannel + lIndex];
-							mCnt++;
-						}
-					}
-				}
-			}
-
-			//delete pfData;
-			SafeArrayUnaccessData(*vntArray.pparray);
-
-			if (lGetCount < GET_CHDATA_MAX) {
-				break;
-			}
+		else
+		{
+			return -1;
 		}
 	}
 
@@ -965,6 +855,73 @@ long CSample3Dlg::GetMFCDataArray(CXdtDocument2* pXdtDoc, VARIANT& vntArray, flo
 		
 		return -1;
 	}
+}
+
+/// <summary>
+/// 指定されたユニットの指定されたチャンネルからデータを取得する
+/// </summary>
+/// <param name="pXdtDoc"></param>
+/// <param name="vntArray"></param>
+/// <param name="unitNo"></param>
+/// <param name="out"></param>
+/// <param name="chNo"></param>
+/// <param name="onError"></param>
+/// <param name="cnt"></param>
+/// <returns></returns>
+int CSample3Dlg::GetChannelData(CXdtDocument2* pXdtDoc, VARIANT& vntArray, int unitNo, float* out, int chNo, std::function<int()> onError, int* cnt)
+{
+	// ユニットnのチャンネル１～のデータを1024個ずつ取得
+	BOOL abValidChannel[HA_CHNUM_MAX];
+	long lDataMax = min(MAX_ARRAY_SIZE, pXdtDoc->GetDataCount());
+	long lDataCnt = 0;
+
+	for (lDataCnt = 0; lDataCnt < lDataMax; ) {
+		// ユニットnのチャンネル0～のデータを取得
+		long lGetCount = -1;
+		for (long lChannel = 0; lChannel < HA_CHNUM_MAX; lChannel++) {
+			long lResult = pXdtDoc->GetArrayData(unitNo, lChannel, lDataCnt, GET_CHDATA_MAX,
+				vntArray, GET_CHDATA_MAX * lChannel);
+			if (lResult > 0) {
+				abValidChannel[lChannel] = TRUE;
+				lGetCount = lResult;
+			}
+			else {
+				abValidChannel[lChannel] = FALSE;
+			}
+		}
+		// ユニットにデータが存在しない
+		if (lGetCount < 0) {
+			return onError();
+		}
+
+		// FlowOut(0), MFMOut(2) 
+		// pfDatはSAFEARRAYが管理しているバッファへの直接ポインタなので、解放不要
+		float* pfData;
+		SafeArrayAccessData(*vntArray.pparray, (void**)&pfData);
+		for (long lIndex = 0; lIndex < lGetCount; lIndex++, lDataCnt++) {
+			out[lDataCnt] = 0.;
+			for (long lChannel = 0; lChannel < HA_CHNUM_MAX; lChannel++) {
+				// flowOut
+				if (lChannel == chNo)
+				{
+					// 無効値は飛ばす
+					if (abValidChannel[lChannel] && pfData[GET_CHDATA_MAX * lChannel + lIndex] != FLT_MAX) {
+						out[lDataCnt] = pfData[GET_CHDATA_MAX * lChannel + lIndex];
+						(*cnt)++;
+					}
+				}
+			}
+		}
+
+		//delete pfData;
+		SafeArrayUnaccessData(*vntArray.pparray);
+
+		if (lGetCount < GET_CHDATA_MAX) {
+			break;
+		}
+	}
+
+	return lDataCnt;
 }
 
 /// <summary>
