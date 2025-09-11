@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ で生成されたインクルード ファイル。
-// Sample3.rc で使用
+// ResponceTimeOutput.rc で使用
 //
 #define IDM_ABOUTBOX                    0x0010
 #define IDD_ABOUTBOX                    100
@@ -33,6 +33,10 @@
 #define IDC_BUTTON_CP_NONSTEP           1012
 #define IDC_BUTTON_CP_STEP_UP           1013
 #define IDC_BUTTON_CP_STEP_DWN          1014
+#define IDC_COMBO_UNIT_FLOWOUT          1016
+#define IDC_COMBO_UNIT_MFMOUT           1017
+#define IDC_COMBO_CH_FLOWOUT            1018
+#define IDC_COMBO_CH_MFMOUT             1019
 
 // Next default values for new objects
 // 
@@ -40,7 +44,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        130
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1010
+#define _APS_NEXT_CONTROL_VALUE         1015
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

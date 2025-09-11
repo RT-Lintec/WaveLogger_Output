@@ -48,7 +48,7 @@ BEGIN
     "LANGUAGE 17, 1\r\n"
     "#pragma code_page(932)\r\n"
     "#endif //_WIN32\r\n"
-    "#include ""res\\Sample3.rc2""  // Microsoft Visual C++ 以外のツールで編集されたリソース\r\n"
+    "#include ""res\\ResponceTimeOutput.rc2""  // Microsoft Visual C++ 以外のツールで編集されたリソース\r\n"
     "#include ""l.jpn\\afxres.rc""          // 標準のコンポーネント\r\n"
     "#endif\r\n"
     "\0"
@@ -74,7 +74,7 @@ IDR_MAINFRAME           ICON                    "res\\ResponceTimeOutput.ico"
 
 IDD_ABOUTBOX DIALOG 0, 0, 266, 56
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Sample3のﾊﾞｰｼﾞｮﾝ情報"
+CAPTION "ResponceTimeOutputのﾊﾞｰｼﾞｮﾝ情報"
 FONT 9, "ＭＳ Ｐゴシック"
 BEGIN
     ICON            IDR_MAINFRAME,IDC_STATIC,11,17,20,20
@@ -84,10 +84,10 @@ BEGIN
     LTEXT           "R1.00.00",IDC_STATIC,40,21,66,8
 END
 
-IDD_SAMPLE3_DIALOG DIALOGEX 0, 0, 555, 372
+IDD_SAMPLE3_DIALOG DIALOGEX 0, 0, 555, 373
 STYLE DS_SETFONT | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_VSCROLL | WS_HSCROLL | WS_SYSMENU | WS_THICKFRAME
 EXSTYLE WS_EX_APPWINDOW
-CAPTION "Sample3"
+CAPTION "ResponceTimeOutput"
 FONT 9, "ＭＳ Ｐゴシック", 0, 0, 0x1
 BEGIN
     LTEXT           "Static",IDC_SUMMARY_STA,7,7,417,53,SS_SUNKEN
@@ -110,6 +110,17 @@ BEGIN
     PUSHBUTTON      "コピー",IDC_BUTTON_CP_STEP_UP,255,105,32,14,WS_DISABLED
     PUSHBUTTON      "コピー",IDC_BUTTON_CP_STEP_DWN,374,105,32,14,WS_DISABLED
     GROUPBOX        "出力モード",IDC_STATIC,426,11,103,49
+    GROUPBOX        "各種設定",IDC_STATIC,428,71,101,142
+    COMBOBOX        IDC_COMBO_UNIT_FLOWOUT,482,98,30,119,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Unit No.",IDC_STATIC,442,101,36,10
+    COMBOBOX        IDC_COMBO_CH_FLOWOUT,482,114,30,132,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Ch No.",IDC_STATIC,442,117,29,10
+    GROUPBOX        "FlowOut",IDC_STATIC,437,86,82,45
+    COMBOBOX        IDC_COMBO_UNIT_MFMOUT,482,149,30,98,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Unit No.",IDC_STATIC,442,152,36,10
+    COMBOBOX        IDC_COMBO_CH_MFMOUT,482,165,30,131,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Ch No.",IDC_STATIC,442,168,29,10
+    GROUPBOX        "MFMOut",IDC_STATIC,437,137,82,45
 END
 
 
@@ -199,7 +210,7 @@ END
 
 STRINGTABLE
 BEGIN
-    IDS_ABOUTBOX            "Sample3 のﾊﾞｰｼﾞｮﾝ情報(&A)..."
+    IDS_ABOUTBOX            "ResponceTimeOutput のﾊﾞｰｼﾞｮﾝ情報(&A)..."
     IDS_ERR_OLE_INIT        "OLE DLL 初期化に失敗しました。"
     IDS_SUMMARY             "【処理概要】\n指定されたファイルからユニット１のチャンネルX(FlowOut),Y(MFMOut)から応答時間を出力します。\n出力モードは以下のラジオボタンから選択します。"
     IDS_REMARKS             "【注意事項】\n・サンプリングデータ数の上限は1048576です"

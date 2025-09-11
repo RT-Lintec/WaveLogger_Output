@@ -44,6 +44,9 @@ static char THIS_FILE[] = __FILE__;
 #define HSIZE					950		// 横サイズ閾値
 #define VSIZE					550		// 縦サイズ閾値
 
+#define UNIT_NUM				3		// データロガーのユニット数
+#define CH_NUM					10		// データロガーのチャンネル数
+
 int nonStepResult[PARAM_SIZE * 2]; // 12*2通りのデータ数
 int stepUpResult[PARAM_SIZE]; // ステップ上昇時のデータ
 int stepDwnResult[PARAM_SIZE]; // ステップ下昇時のデータ
@@ -57,6 +60,10 @@ CButton pRadio_Step;
 CButton btn_Cp_Nonstep;
 CButton btn_Cp_StepUp;
 CButton btn_Cp_StepDwn;
+CComboBox comboFlowUnit;
+CComboBox comboFlowCh;
+CComboBox comboMFMUnit;
+CComboBox comboMFMCH;
 
 const int hSize = HSIZE;
 const int vSize = VSIZE;
@@ -334,6 +341,7 @@ BOOL CSample3Dlg::OnInitDialog()
 	}
 	// 各UIオブジェクトのサブクラス化
 	pRadio_NonStep.SubclassDlgItem(IDC_RADIO1, this);
+	pRadio_NonStep.SetCheck(1);
 	pRadio_Step.SubclassDlgItem(IDC_RADIO2, this);
 	btn_Cp_Nonstep.SubclassDlgItem(IDC_BUTTON_CP_NONSTEP, this);
 	btn_Cp_StepUp.SubclassDlgItem(IDC_BUTTON_CP_STEP_UP, this);
@@ -341,6 +349,30 @@ BOOL CSample3Dlg::OnInitDialog()
 	m_listOutput_NonStep.SubclassDlgItem(IDC_LIST_OUTPUT1, this);
 	m_listOutput_StepUp.SubclassDlgItem(IDC_LIST_OUTPUT2, this);
 	m_listOutput_StepDwn.SubclassDlgItem(IDC_LIST_OUTPUT3, this);
+	comboFlowUnit.SubclassDlgItem(IDC_COMBO_UNIT_FLOWOUT, this);
+	comboFlowCh.SubclassDlgItem(IDC_COMBO_CH_FLOWOUT, this);
+	comboMFMUnit.SubclassDlgItem(IDC_COMBO_UNIT_MFMOUT, this);
+	comboMFMCH.SubclassDlgItem(IDC_COMBO_CH_MFMOUT, this);
+	// ユニット、チャンネル値を追加
+	for (int i = 1; i <= UNIT_NUM; ++i) {
+		CString str;
+		str.Format(_T("%d"), i);
+		comboFlowUnit.AddString(str);
+		comboMFMUnit.AddString(str);
+	}
+	for (int i = 0; i <= CH_NUM; ++i) {
+		CString str;
+		str.Format(_T("%d"), i);
+		comboFlowCh.AddString(str);
+		comboMFMCH.AddString(str);
+	}
+
+	// TODO JSON or XMLで保存→読み込みしたい
+	// ユニット、チャンネル値を設定
+	comboFlowUnit.SetCurSel(0);
+	comboFlowCh.SetCurSel(0);
+	comboMFMUnit.SetCurSel(0);
+	comboMFMCH.SetCurSel(2);
 
 	return TRUE;  // TRUE を返すとコントロールに設定したフォーカスは失われません。
 }
@@ -1030,8 +1062,7 @@ long CSample3Dlg::StepResonseTImeOutput(const float* flowOut, const float* mfmOu
 				else if (!isUp && isDwn)
 				{
 					// 閾値範囲に入ったらカウントしない
-					//if (mfmOut[lIndex] <= upperLim && mfmOut[lIndex] >= lowerLim)
-					if (roundTo(mfmOut[lIndex], 6) <= upperLim && roundTo(mfmOut[lIndex], 6) >= lowerLim)
+					if (mfmOut[lIndex] <= upperLim && mfmOut[lIndex] >= lowerLim)
 					{
 						fiftyCheckCnt = 0;
 					}
@@ -1071,7 +1102,7 @@ long CSample3Dlg::StepResonseTImeOutput(const float* flowOut, const float* mfmOu
 //
 //	関数名称：	SaveCsvFile
 //	日本語名：	CSVファイル保存
-//	説    明：	平均値の波形データをCSVファイルに保存する
+//	説    明：	データをCSVファイルに保存する
 //	引    数：	lpszFilePath	CSVファイルパス
 //				flowOut		平均値の配列
 //				lDataCnt		平均値の配列数
@@ -1222,17 +1253,17 @@ void CSample3Dlg::CopySelectedItemToClipboard()
 	// 非ステップ
 	if (pos_NonStep)
 	{
-		GetCopyText(&m_listOutput_NonStep, pos_NonStep, strText_NonStep);
+		GetCopyTarget(&m_listOutput_NonStep, pos_NonStep, strText_NonStep);
 	}
 	// ステップ立ち上がり
 	else if (pos_StepUp)
 	{
-		GetCopyText(&m_listOutput_StepUp, pos_StepUp, strText_StepUp);
+		GetCopyTarget(&m_listOutput_StepUp, pos_StepUp, strText_StepUp);
 	}
 	// ステップ立ち下がり
 	else if (pos_StepDwn)
 	{
-		GetCopyText(&m_listOutput_StepDwn, pos_StepDwn, strText_StepDwn);
+		GetCopyTarget(&m_listOutput_StepDwn, pos_StepDwn, strText_StepDwn);
 	}
 
 	// クリップボードにコピー
@@ -1262,7 +1293,7 @@ void CSample3Dlg::CopySelectedItemToClipboard()
 /// <summary>
 /// リストコントロールからテキストを取得する
 /// </summary>
-void CSample3Dlg::GetCopyText(CListCtrl* cCtr, POSITION pos, CString& str)
+void CSample3Dlg::GetCopyTarget(CListCtrl* cCtr, POSITION pos, CString& str)
 {
 	while (pos)
 	{
@@ -1497,7 +1528,7 @@ void CSample3Dlg::OnBnClickedButtonCpNonstep()
 	pos_NonStep = m_listOutput_NonStep.GetFirstSelectedItemPosition();
 
 	// テキストデータ取得
-	GetCopyText(&m_listOutput_NonStep, pos_NonStep, strText_NonStep);
+	GetCopyTarget(&m_listOutput_NonStep, pos_NonStep, strText_NonStep);
 	
 	// クリップボードにコピー
 	if (OpenClipboard())
@@ -1511,7 +1542,9 @@ void CSample3Dlg::OnBnClickedButtonCpNonstep()
 	}
 }
 
-
+/// <summary>
+/// データコピーボタン(ステップ立ち上がり)押下時の処理
+/// </summary>
 void CSample3Dlg::OnBnClickedButtonCpStepUp()
 {
 	POSITION pos_StepUp = 0;
@@ -1525,7 +1558,7 @@ void CSample3Dlg::OnBnClickedButtonCpStepUp()
 	pos_StepUp = m_listOutput_StepUp.GetFirstSelectedItemPosition();
 
 	// テキストデータ取得
-	GetCopyText(&m_listOutput_StepUp, pos_StepUp, strText_StepUp);
+	GetCopyTarget(&m_listOutput_StepUp, pos_StepUp, strText_StepUp);
 
 	// クリップボードにコピー
 	if (OpenClipboard())
@@ -1539,7 +1572,9 @@ void CSample3Dlg::OnBnClickedButtonCpStepUp()
 	}
 }
 
-
+/// <summary>
+/// データコピーボタン(ステップ立ち下がり)押下時の処理
+/// </summary>
 void CSample3Dlg::OnBnClickedButtonCpStepDwn()
 {
 	POSITION pos_StepDwn = 0;
@@ -1553,7 +1588,7 @@ void CSample3Dlg::OnBnClickedButtonCpStepDwn()
 	pos_StepDwn = m_listOutput_StepDwn.GetFirstSelectedItemPosition();
 
 	// テキストデータ取得
-	GetCopyText(&m_listOutput_StepDwn, pos_StepDwn, strText_StepDwn);
+	GetCopyTarget(&m_listOutput_StepDwn, pos_StepDwn, strText_StepDwn);
 
 	// クリップボードにコピー
 	if (OpenClipboard())

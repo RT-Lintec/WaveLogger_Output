@@ -48,7 +48,7 @@ protected:
 	long StepResonseTImeOutput(const float* flowOut, const float* mfmOut, long lDataCnt, BOOL bShowError = FALSE);
 
 	//
-	void GetCopyText(CListCtrl* cCtr, POSITION pos, CString& str);
+	void GetCopyTarget(CListCtrl* cCtr, POSITION pos, CString& str);
 	void CopySelectedItemToClipboard();
 	void SetClipbored(CString str);
 
