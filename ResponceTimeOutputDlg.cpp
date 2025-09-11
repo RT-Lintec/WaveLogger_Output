@@ -821,13 +821,37 @@ long CSample3Dlg::GetMFCDataArray(CXdtDocument2* pXdtDoc, VARIANT& vntArray, flo
 		}
 	}
 
+	// 正常終了：FlowOutチャンネルとMFMOutチャンネルのデータが存在する
 	if (fCnt != 0 && mCnt != 0)
 	{
 		return lDataCnt;
 	}
 	else
 	{
-		return 0;
+		CString msg;
+		CString noDataMsg;
+		noDataMsg.LoadString(IDS_NO_CHDATA);
+
+		// FlowOutチャンネルのデータ数0
+		if (fCnt == 0 && mCnt != 0)
+		{
+			msg.Format(_T("FlowOut %s %s"), flowCh, noDataMsg);
+			AfxMessageBox(msg, MB_ICONEXCLAMATION);
+		}
+		// MFMOutチャンネルのデータ数0
+		else if (fCnt != 0 && mCnt == 0)
+		{
+			msg.Format(_T("MFMOut %s %s"), mfmCh, noDataMsg);
+			AfxMessageBox(msg, MB_ICONEXCLAMATION);
+		}
+		// FlowOutチャンネルとMFMOutチャンネルのデータ数0
+		else
+		{
+			msg.Format(_T("FlowOut %s CHとMFMOut %s %s"), flowCh, mfmCh, noDataMsg);
+			AfxMessageBox(msg, MB_ICONEXCLAMATION);
+		}
+		
+		return -1;
 	}
 }
 
