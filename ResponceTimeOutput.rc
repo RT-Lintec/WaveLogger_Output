@@ -232,9 +232,10 @@ STRINGTABLE
 BEGIN
     IDS_COMPLETE_AVERAGE    "平均値の波形データ作成が完了しました。"
     IDS_INVALID_VALUE       "------"
-    IDS_NO_CHDATA           "CHにデータが存在しません。"
+    IDS_NO_CHDATA           "チャンネルにデータが存在しません。"
     IDS_FILEFILTER_NR600    "WAVE LOGGER PRO データファイル|*.udt;*edt;*.rdt"
-    IDS_ERR_SAME_CH         "FlowOutとMFMOutのChが同じです。"
+    IDS_ERR_SAME_CH         "FlowOutとMFMOutのチャンネルが同じです。"
+    IDS_NODATA_UNIT         "指定されたユニットにはデータが存在しません。"
 END
 
 #endif    // 日本語 (日本) resources
