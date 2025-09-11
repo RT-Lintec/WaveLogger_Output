@@ -136,13 +136,13 @@ BEGIN
         BLOCK "041104b0"
         BEGIN
             VALUE "CompanyName", "KEYENCE Corporation"
-            VALUE "FileDescription", "オートメーションサーバ機能サンプルアプリケーション3"
+            VALUE "FileDescription", "WaveLogger応答時間出力プログラム"
             VALUE "FileVersion", "R1.00.00"
-            VALUE "InternalName", "Sample3"
+            VALUE "InternalName", "WaveLoggerCustom"
             VALUE "LegalCopyright", "Copyright (C) 2003-2005"
             VALUE "OriginalFilename", "Sample3.EXE"
             VALUE "PrivateBuild", "0"
-            VALUE "ProductName", "オートメーションサーバ機能サンプルアプリケーション3"
+            VALUE "ProductName", "WaveLogger応答時間出力プログラム"
             VALUE "ProductVersion", "R1.00.00"
             VALUE "SpecialBuild", "0"
         END

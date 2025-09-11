@@ -49,24 +49,12 @@ int nonStepResult[PARAM_SIZE * 2]; // 12*2通りのデータ数
 int stepUpResult[PARAM_SIZE]; // ステップ上昇時のデータ
 int stepDwnResult[PARAM_SIZE]; // ステップ下昇時のデータ
 
-//CListCtrl* m_listOutput_NonStep;
-//CListCtrl* m_listOutput_StepUp;
-//CListCtrl* m_listOutput_StepDwn;
-//// 出力モードのラジオボタンローカルポインタ
-//CButton* pRadio_NonStep;
-//CButton* pRadio_Step;
-//// データコピーボタン
-//CButton* btn_Cp_Nonstep;
-//CButton* btn_Cp_StepUp;
-//CButton* btn_Cp_StepDwn;
-
+// 各UIオブジェクト
 CListCtrl m_listOutput_NonStep;
 CListCtrl m_listOutput_StepUp;
 CListCtrl m_listOutput_StepDwn;
-// 出力モードのラジオボタンローカルポインタ
 CButton pRadio_NonStep;
 CButton pRadio_Step;
-// データコピーボタン
 CButton btn_Cp_Nonstep;
 CButton btn_Cp_StepUp;
 CButton btn_Cp_StepDwn;
@@ -347,15 +335,12 @@ BOOL CSample3Dlg::OnInitDialog()
 		SetScrollRange(SB_HORZ, 0, m_nScrollRangeX - m_nScrollPageX, FALSE);
 		SetScrollPos(SB_HORZ, 0, TRUE);
 	}
-	// 出力モードのラジオボタンローカルポインタ
+	// 各UIオブジェクトのサブクラス化
 	pRadio_NonStep.SubclassDlgItem(IDC_RADIO1, this);
 	pRadio_Step.SubclassDlgItem(IDC_RADIO2, this);
-
-	// データコピーボタンローカルポインタ
 	btn_Cp_Nonstep.SubclassDlgItem(IDC_BUTTON_CP_NONSTEP, this);
 	btn_Cp_StepUp.SubclassDlgItem(IDC_BUTTON_CP_STEP_UP, this);
 	btn_Cp_StepDwn.SubclassDlgItem(IDC_BUTTON_CP_STEP_DWN, this);
-
 	m_listOutput_NonStep.SubclassDlgItem(IDC_LIST_OUTPUT1, this);
 	m_listOutput_StepUp.SubclassDlgItem(IDC_LIST_OUTPUT2, this);
 	m_listOutput_StepDwn.SubclassDlgItem(IDC_LIST_OUTPUT3, this);
@@ -719,6 +704,7 @@ long CSample3Dlg::GetMFCDataArray(CXdtDocument2* pXdtDoc, VARIANT& vntArray, flo
 		}
 
 		// FlowOut(0), MFMOut(2) 
+		// pfDatはSAFEARRAYが管理しているバッファへの直接ポインタなので、解放不要
 		float* pfData;
 		SafeArrayAccessData(*vntArray.pparray, (void**)&pfData);
 		for (long lIndex = 0; lIndex < lGetCount; lIndex++, lDataCnt++) {
@@ -1152,20 +1138,6 @@ void CSample3Dlg::OnBnClickedRadio2()
 /// </summary>
 void CSample3Dlg::OnBnClickedOk()
 {
-	//// 出力モードのラジオボタンローカルポインタ
-	//pRadio_NonStep = (CButton*)GetDlgItem(IDC_RADIO1);
-	//pRadio_Step = (CButton*)GetDlgItem(IDC_RADIO2);
-
-	//// データコピーボタンローカルポインタ
-	//btn_Cp_Nonstep = (CButton*)GetDlgItem(IDC_BUTTON_CP_NONSTEP);
-	//btn_Cp_StepUp = (CButton*)GetDlgItem(IDC_BUTTON_CP_STEP_UP);
-	//btn_Cp_StepDwn = (CButton*)GetDlgItem(IDC_BUTTON_CP_STEP_DWN);
-
-	////m_listOutput_NonStep = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT1);
-	//m_listOutput_StepUp = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT2);
-	//m_listOutput_StepDwn = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT3);
-
-	
 	// 出力モード選択チェック
 	if (!pRadio_NonStep.GetCheck() && !pRadio_Step.GetCheck())
 	{
