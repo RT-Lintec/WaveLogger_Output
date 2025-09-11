@@ -714,56 +714,77 @@ long CSample3Dlg::GetMFCDataArray(CXdtDocument2* pXdtDoc, VARIANT& vntArray, flo
 	BOOL abValidChannel[HA_CHNUM_MAX];
 	long lDataMax = min(MAX_ARRAY_SIZE, pXdtDoc->GetDataCount());
 	long lDataCnt = 0;
-	for (lDataCnt = 0; lDataCnt < lDataMax; ) {
-		// ユニット１のチャンネル１～のデータを取得
-		long lGetCount = -1;
-		for (long lChannel = 0; lChannel < HA_CHNUM_MAX; lChannel++) {
-			long lResult = pXdtDoc->GetArrayData(1, lChannel, lDataCnt, GET_CHDATA_MAX,
-				vntArray, GET_CHDATA_MAX * lChannel);
-			if (lResult > 0) {
-				abValidChannel[lChannel] = TRUE;
-				lGetCount = lResult;
-			}
-			else {
-				abValidChannel[lChannel] = FALSE;
-			}
-		}
-		if (lGetCount < 0) {
-			return -1;
-		}
 
-		// FlowOut(0), MFMOut(2) 
-		// pfDatはSAFEARRAYが管理しているバッファへの直接ポインタなので、解放不要
-		float* pfData;
-		SafeArrayAccessData(*vntArray.pparray, (void**)&pfData);
-		for (long lIndex = 0; lIndex < lGetCount; lIndex++, lDataCnt++) {
-			flowOut[lDataCnt] = 0.;
+	CString flowUnit;
+	CString mfmUnit;
+	// コンボボックスの選択インデクス取得
+	int flowUnitNo = comboFlowUnit.GetCurSel();
+	int mfmUnitNo = comboMFMUnit.GetCurSel();
+
+	// インデクスから文字列取得、文字列を数値に変換
+	if (flowUnitNo != CB_ERR) {
+		comboFlowUnit.GetLBText(flowUnitNo, flowUnit);
+		flowUnitNo = _ttoi(flowUnit);
+	}
+	if (mfmUnit != CB_ERR) {
+		comboMFMUnit.GetLBText(mfmUnitNo, mfmUnit);
+		mfmUnitNo = _ttoi(mfmUnit);
+	}
+
+	// FLowOut, MFMOutのユニットが同じ場合
+	if (flowUnitNo == mfmUnitNo)
+	{
+		for (lDataCnt = 0; lDataCnt < lDataMax; ) {
+			// ユニットnのチャンネル１～のデータを取得
+			long lGetCount = -1;
 			for (long lChannel = 0; lChannel < HA_CHNUM_MAX; lChannel++) {
-				// flowOut
-				if (lChannel == 0)
-				{
-					// 無効値は飛ばす
-					if (abValidChannel[lChannel] && pfData[GET_CHDATA_MAX * lChannel + lIndex] != FLT_MAX) {
-						flowOut[lDataCnt] = pfData[GET_CHDATA_MAX * lChannel + lIndex];
-					}
+				long lResult = pXdtDoc->GetArrayData(1, lChannel, lDataCnt, GET_CHDATA_MAX,
+					vntArray, GET_CHDATA_MAX * lChannel);
+				if (lResult > 0) {
+					abValidChannel[lChannel] = TRUE;
+					lGetCount = lResult;
 				}
+				else {
+					abValidChannel[lChannel] = FALSE;
+				}
+			}
+			if (lGetCount < 0) {
+				return -1;
+			}
 
-				// mfmOut
-				if (lChannel == 2)
-				{
-					// 無効値は飛ばす
-					if (abValidChannel[lChannel] && pfData[GET_CHDATA_MAX * lChannel + lIndex] != FLT_MAX) {
-						mfmOut[lDataCnt] = pfData[GET_CHDATA_MAX * lChannel + lIndex];
+			// FlowOut(0), MFMOut(2) 
+			// pfDatはSAFEARRAYが管理しているバッファへの直接ポインタなので、解放不要
+			float* pfData;
+			SafeArrayAccessData(*vntArray.pparray, (void**)&pfData);
+			for (long lIndex = 0; lIndex < lGetCount; lIndex++, lDataCnt++) {
+				flowOut[lDataCnt] = 0.;
+				for (long lChannel = 0; lChannel < HA_CHNUM_MAX; lChannel++) {
+					// flowOut
+					if (lChannel == 0)
+					{
+						// 無効値は飛ばす
+						if (abValidChannel[lChannel] && pfData[GET_CHDATA_MAX * lChannel + lIndex] != FLT_MAX) {
+							flowOut[lDataCnt] = pfData[GET_CHDATA_MAX * lChannel + lIndex];
+						}
+					}
+
+					// mfmOut
+					if (lChannel == 2)
+					{
+						// 無効値は飛ばす
+						if (abValidChannel[lChannel] && pfData[GET_CHDATA_MAX * lChannel + lIndex] != FLT_MAX) {
+							mfmOut[lDataCnt] = pfData[GET_CHDATA_MAX * lChannel + lIndex];
+						}
 					}
 				}
 			}
-		}
 
-		//delete pfData;
-		SafeArrayUnaccessData(*vntArray.pparray);
+			//delete pfData;
+			SafeArrayUnaccessData(*vntArray.pparray);
 
-		if (lGetCount < GET_CHDATA_MAX) {
-			break;
+			if (lGetCount < GET_CHDATA_MAX) {
+				break;
+			}
 		}
 	}
 
