@@ -20,6 +20,8 @@
 #define IDS_INVALID_VALUE               113
 #define IDS_ERR_NOUNIT                  114
 #define IDS_FILEFILTER_NR600            115
+#define IDS_STRING114                   116
+#define IDS_ERR_SAME_CH                 116
 #define IDR_MAINFRAME                   128
 #define IDC_SUMMARY_STA                 1000
 #define IDC_RADIO1                      1001

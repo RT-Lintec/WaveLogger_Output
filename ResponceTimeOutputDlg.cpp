@@ -63,7 +63,7 @@ CButton btn_Cp_StepDwn;
 CComboBox comboFlowUnit;
 CComboBox comboFlowCh;
 CComboBox comboMFMUnit;
-CComboBox comboMFMCH;
+CComboBox comboMFMCh;
 
 const int hSize = HSIZE;
 const int vSize = VSIZE;
@@ -352,7 +352,7 @@ BOOL CSample3Dlg::OnInitDialog()
 	comboFlowUnit.SubclassDlgItem(IDC_COMBO_UNIT_FLOWOUT, this);
 	comboFlowCh.SubclassDlgItem(IDC_COMBO_CH_FLOWOUT, this);
 	comboMFMUnit.SubclassDlgItem(IDC_COMBO_UNIT_MFMOUT, this);
-	comboMFMCH.SubclassDlgItem(IDC_COMBO_CH_MFMOUT, this);
+	comboMFMCh.SubclassDlgItem(IDC_COMBO_CH_MFMOUT, this);
 	// ユニット、チャンネル値を追加
 	for (int i = 1; i <= UNIT_NUM; ++i) {
 		CString str;
@@ -364,7 +364,7 @@ BOOL CSample3Dlg::OnInitDialog()
 		CString str;
 		str.Format(_T("%d"), i);
 		comboFlowCh.AddString(str);
-		comboMFMCH.AddString(str);
+		comboMFMCh.AddString(str);
 	}
 
 	// TODO JSON or XMLで保存→読み込みしたい
@@ -372,7 +372,7 @@ BOOL CSample3Dlg::OnInitDialog()
 	comboFlowUnit.SetCurSel(0);
 	comboFlowCh.SetCurSel(0);
 	comboMFMUnit.SetCurSel(0);
-	comboMFMCH.SetCurSel(2);
+	comboMFMCh.SetCurSel(2);
 
 	return TRUE;  // TRUE を返すとコントロールに設定したフォーカスは失われません。
 }
@@ -530,6 +530,7 @@ void CSample3Dlg::OnOK()
 
 	// 対象データ取得
 	long lDataCnt = GetMFCDataArray(&XdtDoc, vntArray, flowOut.data(), mfmOut.data());
+	if (lDataCnt == -1) return;
 	XdtDoc.CloseFile();
 
 	// 波形データ配列取得用バッファ解放
@@ -715,27 +716,49 @@ long CSample3Dlg::GetMFCDataArray(CXdtDocument2* pXdtDoc, VARIANT& vntArray, flo
 	long lDataMax = min(MAX_ARRAY_SIZE, pXdtDoc->GetDataCount());
 	long lDataCnt = 0;
 
+	// コンボボックスのUNIT選択インデクス取得
+	// インデクスから文字列取得、文字列を数値に変換
 	CString flowUnit;
 	CString mfmUnit;
-	// コンボボックスの選択インデクス取得
 	int flowUnitNo = comboFlowUnit.GetCurSel();
-	int mfmUnitNo = comboMFMUnit.GetCurSel();
-
-	// インデクスから文字列取得、文字列を数値に変換
+	int mfmUnitNo = comboMFMUnit.GetCurSel();	
 	if (flowUnitNo != CB_ERR) {
 		comboFlowUnit.GetLBText(flowUnitNo, flowUnit);
 		flowUnitNo = _ttoi(flowUnit);
 	}
-	if (mfmUnit != CB_ERR) {
+	if (mfmUnitNo != CB_ERR) {
 		comboMFMUnit.GetLBText(mfmUnitNo, mfmUnit);
 		mfmUnitNo = _ttoi(mfmUnit);
 	}
+
+	// コンボボックスのCh選択インデクス取得
+	// インデクスから文字列取得、文字列を数値に変換
+	CString flowCh;
+	CString mfmCh;
+	int flowChNo = comboFlowCh.GetCurSel();
+	int mfmChNo = comboMFMCh.GetCurSel();
+	if (flowChNo != CB_ERR) {
+		comboFlowCh.GetLBText(flowChNo, flowCh);
+		flowChNo = _ttoi(flowCh);
+	}
+	if (mfmChNo != CB_ERR) {
+		comboMFMCh.GetLBText(mfmChNo, mfmCh);
+		mfmChNo = _ttoi(mfmCh);
+	}
+
+	if (flowChNo == mfmChNo)
+	{
+		AfxMessageBox(IDS_ERR_SAME_CH, MB_ICONEXCLAMATION);
+		return -1;
+	}
+
+	int fCnt = 0, mCnt = 0;
 
 	// FLowOut, MFMOutのユニットが同じ場合
 	if (flowUnitNo == mfmUnitNo)
 	{
 		for (lDataCnt = 0; lDataCnt < lDataMax; ) {
-			// ユニットnのチャンネル１～のデータを取得
+			// ユニットnのチャンネル0～のデータを取得
 			long lGetCount = -1;
 			for (long lChannel = 0; lChannel < HA_CHNUM_MAX; lChannel++) {
 				long lResult = pXdtDoc->GetArrayData(1, lChannel, lDataCnt, GET_CHDATA_MAX,
@@ -760,20 +783,22 @@ long CSample3Dlg::GetMFCDataArray(CXdtDocument2* pXdtDoc, VARIANT& vntArray, flo
 				flowOut[lDataCnt] = 0.;
 				for (long lChannel = 0; lChannel < HA_CHNUM_MAX; lChannel++) {
 					// flowOut
-					if (lChannel == 0)
+					if (lChannel == flowChNo)
 					{
 						// 無効値は飛ばす
 						if (abValidChannel[lChannel] && pfData[GET_CHDATA_MAX * lChannel + lIndex] != FLT_MAX) {
 							flowOut[lDataCnt] = pfData[GET_CHDATA_MAX * lChannel + lIndex];
+							fCnt++;
 						}
 					}
 
 					// mfmOut
-					if (lChannel == 2)
+					if (lChannel == mfmChNo)
 					{
 						// 無効値は飛ばす
 						if (abValidChannel[lChannel] && pfData[GET_CHDATA_MAX * lChannel + lIndex] != FLT_MAX) {
 							mfmOut[lDataCnt] = pfData[GET_CHDATA_MAX * lChannel + lIndex];
+							mCnt++;
 						}
 					}
 				}
@@ -788,7 +813,14 @@ long CSample3Dlg::GetMFCDataArray(CXdtDocument2* pXdtDoc, VARIANT& vntArray, flo
 		}
 	}
 
-	return lDataCnt;
+	if (fCnt != 0 && mCnt != 0)
+	{
+		return lDataCnt;
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 /// <summary>
