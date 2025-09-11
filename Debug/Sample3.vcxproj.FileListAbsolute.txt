@@ -1,2 +1,0 @@
-C:\Users\takahashi\Desktop\Automation\VC\Sample3\Debug\Sample3.exe
-C:\Users\takahashi\Documents\programs\WaveLoggerOutput\Debug\Sample3.exe
