@@ -64,6 +64,8 @@ CComboBox comboFlowUnit;
 CComboBox comboFlowCh;
 CComboBox comboMFMUnit;
 CComboBox comboMFMCh;
+CStatic nonstepResultPath;
+CStatic stepResultPath;
 
 const int hSize = HSIZE;
 const int vSize = VSIZE;
@@ -302,7 +304,7 @@ BOOL CSample3Dlg::OnInitDialog()
 	CString strSummary, strRemarks;
 	strSummary.LoadString(IDS_SUMMARY);
 	strRemarks.LoadString(IDS_REMARKS);
-	strSummary += _T("\n\n");
+	strSummary += _T("\n");
 	strSummary += strRemarks;
 	SetDlgItemText(IDC_SUMMARY_STA, strSummary);
 
@@ -353,6 +355,8 @@ BOOL CSample3Dlg::OnInitDialog()
 	comboFlowCh.SubclassDlgItem(IDC_COMBO_CH_FLOWOUT, this);
 	comboMFMUnit.SubclassDlgItem(IDC_COMBO_UNIT_MFMOUT, this);
 	comboMFMCh.SubclassDlgItem(IDC_COMBO_CH_MFMOUT, this);
+	nonstepResultPath.SubclassDlgItem(IDC_STATIC_NonStepResultPath, this);
+	stepResultPath.SubclassDlgItem(IDC_STATIC_StepResultPath, this);
 	// ユニット、チャンネル値を追加
 	for (int i = 1; i <= UNIT_NUM; ++i) {
 		CString str;
@@ -565,8 +569,10 @@ void CSample3Dlg::OnOK()
 			// データコピーボタンを有効化
 			if (!btn_Cp_Nonstep.IsWindowEnabled())
 			{
-				btn_Cp_Nonstep.EnableWindow(TRUE);
+				btn_Cp_Nonstep.EnableWindow(TRUE);				
 			}
+			// 読み込んだパスの表示
+			nonstepResultPath.SetWindowTextA(strFilePath);
 		}
 		else if (lDataCnt == 0) {
 			// 波形データなし
@@ -615,8 +621,10 @@ void CSample3Dlg::OnOK()
 			// データコピーボタンを有効化
 			if (!btn_Cp_StepDwn.IsWindowEnabled())
 			{
-				btn_Cp_StepDwn.EnableWindow(TRUE);
+				btn_Cp_StepDwn.EnableWindow(TRUE);				
 			}
+			// 読み込んだパスの表示
+			stepResultPath.SetWindowTextA(strFilePath);
 		}
 		else if (lDataCnt == 0) {
 			// 波形データなし
@@ -876,7 +884,9 @@ long CSample3Dlg::NonStepResonseTImeOutput(const float* flowOut, const float* mf
 					pastMSec = 0;
 					millSec = 0;
 					upperLim = threshold_NonStep.volt[thresholdCnt] + threshold_NonStep.threshold[thresholdCnt];
+					upperLim = roundTo(upperLim, 6);
 					lowerLim = threshold_NonStep.volt[thresholdCnt] - threshold_NonStep.threshold[thresholdCnt];
+					lowerLim = roundTo(lowerLim, 6);
 					fiftyCheckCnt = 0;
 				}
 				else
@@ -906,7 +916,9 @@ long CSample3Dlg::NonStepResonseTImeOutput(const float* flowOut, const float* mf
 					pastMSec = 0;
 					millSec = 0;
 					upperLim = threshold_NonStep.volt[PARAM_SIZE] + threshold_NonStep.threshold[PARAM_SIZE];
+					upperLim = roundTo(upperLim, 6);
 					lowerLim = threshold_NonStep.volt[PARAM_SIZE] - threshold_NonStep.threshold[PARAM_SIZE];
+					lowerLim = roundTo(lowerLim, 6);
 					fiftyCheckCnt = 0;
 				}
 				else
@@ -1234,11 +1246,14 @@ void CSample3Dlg::OnBnClickedOk()
 			for (int i = 0; i < columnCount; i++)
 			{
 				m_listOutput_NonStep.DeleteColumn(0);
-			}			
+			}
+
+			// データパスを空欄に
+			nonstepResultPath.SetWindowTextA("");
 
 			// 列追加
 			m_listOutput_NonStep.InsertColumn(0, _T("出力設定(%)"), LVCFMT_LEFT, 80);
-			m_listOutput_NonStep.InsertColumn(1, _T("出力時間(msec)"), LVCFMT_LEFT, 100);
+			m_listOutput_NonStep.InsertColumn(1, _T("出力時間(sec)"), LVCFMT_LEFT, 100);
 		}
 		// リストコントロール2の初期化
 		else if (pRadio_Step.GetCheck())
@@ -1275,11 +1290,14 @@ void CSample3Dlg::OnBnClickedOk()
 				m_listOutput_StepDwn.DeleteColumn(0);
 			}
 
+			// データパスを空欄に
+			stepResultPath.SetWindowTextA("");
+
 			// 列追加
 			m_listOutput_StepUp.InsertColumn(0, _T("出力設定(%)"), LVCFMT_LEFT, 80);
-			m_listOutput_StepUp.InsertColumn(1, _T("出力時間(msec)"), LVCFMT_LEFT, 100);
+			m_listOutput_StepUp.InsertColumn(1, _T("出力時間(sec)"), LVCFMT_LEFT, 100);
 			m_listOutput_StepDwn.InsertColumn(0, _T("出力設定(%)"), LVCFMT_LEFT, 80);
-			m_listOutput_StepDwn.InsertColumn(1, _T("出力時間(msec)"), LVCFMT_LEFT, 100);
+			m_listOutput_StepDwn.InsertColumn(1, _T("出力時間(sec)"), LVCFMT_LEFT, 100);
 		}
 
 		CSample3Dlg::OnOK();

@@ -20,7 +20,6 @@
 #define IDS_INVALID_VALUE               113
 #define IDS_ERR_NOUNIT                  114
 #define IDS_FILEFILTER_NR600            115
-#define IDS_STRING114                   116
 #define IDS_ERR_SAME_CH                 116
 #define IDR_MAINFRAME                   128
 #define IDC_SUMMARY_STA                 1000
@@ -35,10 +34,12 @@
 #define IDC_BUTTON_CP_NONSTEP           1012
 #define IDC_BUTTON_CP_STEP_UP           1013
 #define IDC_BUTTON_CP_STEP_DWN          1014
+#define IDC_STATIC_NonStepResultPath    1015
 #define IDC_COMBO_UNIT_FLOWOUT          1016
 #define IDC_COMBO_UNIT_MFMOUT           1017
 #define IDC_COMBO_CH_FLOWOUT            1018
 #define IDC_COMBO_CH_MFMOUT             1019
+#define IDC_STATIC_StepResultPath       1020
 
 // Next default values for new objects
 // 
@@ -46,7 +47,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        130
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1015
-#define _APS_NEXT_SYMED_VALUE           101
+#define _APS_NEXT_CONTROL_VALUE         1021
+#define _APS_NEXT_SYMED_VALUE           1030
 #endif
 #endif
