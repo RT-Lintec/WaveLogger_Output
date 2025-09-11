@@ -11,7 +11,7 @@
 #include "Sample3.h"
 #include "Sample3Dlg.h"
 #include <cmath>
-
+#include <vector>
 #include <float.h>
 
 #ifdef _DEBUG
@@ -49,16 +49,27 @@ int nonStepResult[PARAM_SIZE * 2]; // 12*2通りのデータ数
 int stepUpResult[PARAM_SIZE]; // ステップ上昇時のデータ
 int stepDwnResult[PARAM_SIZE]; // ステップ下昇時のデータ
 
-CListCtrl* m_listOutput_NonStep;
-CListCtrl* m_listOutput_StepUp;
-CListCtrl* m_listOutput_StepDwn;
+//CListCtrl* m_listOutput_NonStep;
+//CListCtrl* m_listOutput_StepUp;
+//CListCtrl* m_listOutput_StepDwn;
+//// 出力モードのラジオボタンローカルポインタ
+//CButton* pRadio_NonStep;
+//CButton* pRadio_Step;
+//// データコピーボタン
+//CButton* btn_Cp_Nonstep;
+//CButton* btn_Cp_StepUp;
+//CButton* btn_Cp_StepDwn;
+
+CListCtrl m_listOutput_NonStep;
+CListCtrl m_listOutput_StepUp;
+CListCtrl m_listOutput_StepDwn;
 // 出力モードのラジオボタンローカルポインタ
-CButton* pRadio_NonStep;
-CButton* pRadio_Step;
+CButton pRadio_NonStep;
+CButton pRadio_Step;
 // データコピーボタン
-CButton* btn_Cp_Nonstep;
-CButton* btn_Cp_StepUp;
-CButton* btn_Cp_StepDwn;
+CButton btn_Cp_Nonstep;
+CButton btn_Cp_StepUp;
+CButton btn_Cp_StepDwn;
 
 const int hSize = HSIZE;
 const int vSize = VSIZE;
@@ -336,6 +347,18 @@ BOOL CSample3Dlg::OnInitDialog()
 		SetScrollRange(SB_HORZ, 0, m_nScrollRangeX - m_nScrollPageX, FALSE);
 		SetScrollPos(SB_HORZ, 0, TRUE);
 	}
+	// 出力モードのラジオボタンローカルポインタ
+	pRadio_NonStep.SubclassDlgItem(IDC_RADIO1, this);
+	pRadio_Step.SubclassDlgItem(IDC_RADIO2, this);
+
+	// データコピーボタンローカルポインタ
+	btn_Cp_Nonstep.SubclassDlgItem(IDC_BUTTON_CP_NONSTEP, this);
+	btn_Cp_StepUp.SubclassDlgItem(IDC_BUTTON_CP_STEP_UP, this);
+	btn_Cp_StepDwn.SubclassDlgItem(IDC_BUTTON_CP_STEP_DWN, this);
+
+	m_listOutput_NonStep.SubclassDlgItem(IDC_LIST_OUTPUT1, this);
+	m_listOutput_StepUp.SubclassDlgItem(IDC_LIST_OUTPUT2, this);
+	m_listOutput_StepDwn.SubclassDlgItem(IDC_LIST_OUTPUT3, this);
 
 	return TRUE;  // TRUE を返すとコントロールに設定したフォーカスは失われません。
 }
@@ -454,8 +477,6 @@ void CSample3Dlg::OnBrowseBtn()
 void CSample3Dlg::OnOK() 
 {
 	CWaitCursor WaitCursor;
-	CButton* pRadio_NonStep = (CButton*)GetDlgItem(IDC_RADIO1);
-	CButton* pRadio_Step = (CButton*)GetDlgItem(IDC_RADIO2);
 
 	// ファイルパスチェック
 	CString strFilePath;
@@ -483,27 +504,29 @@ void CSample3Dlg::OnOK()
 		return;
 	}
 
-	// 各バッファ確保
-	float* flowOut = new float[MAX_ARRAY_SIZE];
-	float* mfmOut = new float[MAX_ARRAY_SIZE];
+	// 各バッファ確保<vector>
+	// -自動でメモリ管理される
+	// -例外が発生しても確実にメモリ解放される
+	std::vector<float> flowOut(MAX_ARRAY_SIZE);
+	std::vector<float> mfmOut(MAX_ARRAY_SIZE);
 
 	VARIANT vntArray;
 	vntArray.vt = VT_ARRAY | VT_R4 | VT_BYREF;
 	vntArray.pparray = &psa;
 
 	// 対象データ取得
-	long lDataCnt = GetMFCDataArray(&XdtDoc, vntArray, flowOut, mfmOut);
+	long lDataCnt = GetMFCDataArray(&XdtDoc, vntArray, flowOut.data(), mfmOut.data());
 	XdtDoc.CloseFile();
 
 	// 波形データ配列取得用バッファ解放
 	SafeArrayDestroy(psa);
 
 	// 非ステップモード
-	if (pRadio_NonStep->GetCheck())
+	if (pRadio_NonStep.GetCheck())
 	{
 		if (lDataCnt > 0) {
 			// 応答時間データ作成
-			NonStepResonseTImeOutput(flowOut, mfmOut, lDataCnt, TRUE);
+			NonStepResonseTImeOutput(flowOut.data(), mfmOut.data(), lDataCnt, TRUE);
 
 			// リストコントロール1に出力
 			for (int i = 0; i < sizeof(nonStepResult) / sizeof(nonStepResult[0]); i++)
@@ -517,17 +540,17 @@ void CSample3Dlg::OnOK()
 				{
 					str.Format(_T("%d"), 0);
 				}
-				int index = m_listOutput_NonStep->InsertItem(i, str); // i番目に挿入
+				int index = m_listOutput_NonStep.InsertItem(i, str); // i番目に挿入
 
 				CString strValue;
 				strValue.Format(_T("%.3f"), (float)(nonStepResult[i])/1000);  // 小数点3桁まで表示（必要に応じて調整）
 
-				m_listOutput_NonStep->SetItemText(index, 1, strValue);
+				m_listOutput_NonStep.SetItemText(index, 1, strValue);
 			}
 			// データコピーボタンを有効化
-			if (!btn_Cp_Nonstep->IsWindowEnabled())
+			if (!btn_Cp_Nonstep.IsWindowEnabled())
 			{
-				btn_Cp_Nonstep->EnableWindow(TRUE);
+				btn_Cp_Nonstep.EnableWindow(TRUE);
 			}
 		}
 		else if (lDataCnt == 0) {
@@ -540,11 +563,11 @@ void CSample3Dlg::OnOK()
 		}
 	}
 	// ステップモード
-	else if (pRadio_Step->GetCheck())
+	else if (pRadio_Step.GetCheck())
 	{
 		if (lDataCnt > 0) {
 			// 応答時間データ作成
-			StepResonseTImeOutput(flowOut, mfmOut, lDataCnt, TRUE);
+			StepResonseTImeOutput(flowOut.data(), mfmOut.data(), lDataCnt, TRUE);
 
 			CString str;
 			CString strValue;
@@ -553,15 +576,15 @@ void CSample3Dlg::OnOK()
 			{				
 				str.Format(_T("%d"), threshold_Step.settingUpPercentage[i]);
 				// インデクスをリストi番目に挿入
-				int index = m_listOutput_StepUp->InsertItem(i, str);
+				int index = m_listOutput_StepUp.InsertItem(i, str);
 				// 小数点3桁まで表示
 				strValue.Format(_T("%.3f"), (float)(stepUpResult[i]) / 1000);
-				m_listOutput_StepUp->SetItemText(index, 1, strValue);
+				m_listOutput_StepUp.SetItemText(index, 1, strValue);
 			}
 			// データコピーボタンを有効化
-			if (!btn_Cp_StepUp->IsWindowEnabled())
+			if (!btn_Cp_StepUp.IsWindowEnabled())
 			{
-				btn_Cp_StepUp->EnableWindow(TRUE);
+				btn_Cp_StepUp.EnableWindow(TRUE);
 			}
 
 			// リストコントロール3に立ち下がり出力
@@ -569,15 +592,15 @@ void CSample3Dlg::OnOK()
 			{
 				str.Format(_T("%d"), threshold_Step.settingDwnPercentage[i]);
 				// インデクスをリストi番目に挿入
-				int index = m_listOutput_StepDwn->InsertItem(i, str);
+				int index = m_listOutput_StepDwn.InsertItem(i, str);
 				// 小数点3桁まで表示
 				strValue.Format(_T("%.3f"), (float)(stepDwnResult[i]) / 1000);
-				m_listOutput_StepDwn->SetItemText(index, 1, strValue);
+				m_listOutput_StepDwn.SetItemText(index, 1, strValue);
 			}
 			// データコピーボタンを有効化
-			if (!btn_Cp_StepDwn->IsWindowEnabled())
+			if (!btn_Cp_StepDwn.IsWindowEnabled())
 			{
-				btn_Cp_StepDwn->EnableWindow(TRUE);
+				btn_Cp_StepDwn.EnableWindow(TRUE);
 			}
 		}
 		else if (lDataCnt == 0) {
@@ -721,6 +744,7 @@ long CSample3Dlg::GetMFCDataArray(CXdtDocument2* pXdtDoc, VARIANT& vntArray, flo
 			}
 		}
 
+		//delete pfData;
 		SafeArrayUnaccessData(*vntArray.pparray);
 
 		if (lGetCount < GET_CHDATA_MAX) {
@@ -1128,93 +1152,93 @@ void CSample3Dlg::OnBnClickedRadio2()
 /// </summary>
 void CSample3Dlg::OnBnClickedOk()
 {
-	// 出力モードのラジオボタンローカルポインタ
-	pRadio_NonStep = (CButton*)GetDlgItem(IDC_RADIO1);
-	pRadio_Step = (CButton*)GetDlgItem(IDC_RADIO2);
+	//// 出力モードのラジオボタンローカルポインタ
+	//pRadio_NonStep = (CButton*)GetDlgItem(IDC_RADIO1);
+	//pRadio_Step = (CButton*)GetDlgItem(IDC_RADIO2);
 
-	// データコピーボタンローカルポインタ
-	btn_Cp_Nonstep = (CButton*)GetDlgItem(IDC_BUTTON_CP_NONSTEP);
-	btn_Cp_StepUp = (CButton*)GetDlgItem(IDC_BUTTON_CP_STEP_UP);
-	btn_Cp_StepDwn = (CButton*)GetDlgItem(IDC_BUTTON_CP_STEP_DWN);
+	//// データコピーボタンローカルポインタ
+	//btn_Cp_Nonstep = (CButton*)GetDlgItem(IDC_BUTTON_CP_NONSTEP);
+	//btn_Cp_StepUp = (CButton*)GetDlgItem(IDC_BUTTON_CP_STEP_UP);
+	//btn_Cp_StepDwn = (CButton*)GetDlgItem(IDC_BUTTON_CP_STEP_DWN);
 
-	m_listOutput_NonStep = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT1);
-	m_listOutput_StepUp = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT2);
-	m_listOutput_StepDwn = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT3);
+	////m_listOutput_NonStep = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT1);
+	//m_listOutput_StepUp = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT2);
+	//m_listOutput_StepDwn = (CListCtrl*)GetDlgItem(IDC_LIST_OUTPUT3);
 
 	
 	// 出力モード選択チェック
-	if (!pRadio_NonStep->GetCheck() && !pRadio_Step->GetCheck())
+	if (!pRadio_NonStep.GetCheck() && !pRadio_Step.GetCheck())
 	{
 		AfxMessageBox(_T("ラジオボタンから出力モードを選択してください。"));
 	}
 	else
 	{
 		// リストコントロール1の初期化
-		if (pRadio_NonStep->GetCheck())
+		if (pRadio_NonStep.GetCheck())
 		{
 			// 既存データがある場合、すべて削除する
-			int nonStepDataCnt = m_listOutput_NonStep->GetItemCount();
+			int nonStepDataCnt = m_listOutput_NonStep.GetItemCount();
 			if (nonStepDataCnt > 0)
 			{
 				for (int i = 0; i < nonStepDataCnt; i++)
 				{
 					// リストの先頭削除を繰り返すことで全て削除
 					// (i)とすると消すごとにオフセットされるので全て消せない
-					m_listOutput_NonStep->DeleteItem(0);
+					m_listOutput_NonStep.DeleteItem(0);
 				}
 			}
 
 			// 2列あり、一つ消すと[1]→[0]になるため連続して0を消している
-			int columnCount = m_listOutput_NonStep->GetHeaderCtrl()->GetItemCount();
+			int columnCount = m_listOutput_NonStep.GetHeaderCtrl()->GetItemCount();
 			for (int i = 0; i < columnCount; i++)
 			{
-				m_listOutput_NonStep->DeleteColumn(0);
+				m_listOutput_NonStep.DeleteColumn(0);
 			}			
 
 			// 列追加
-			m_listOutput_NonStep->InsertColumn(0, _T("出力設定(%)"), LVCFMT_LEFT, 80);
-			m_listOutput_NonStep->InsertColumn(1, _T("出力時間(msec)"), LVCFMT_LEFT, 100);
+			m_listOutput_NonStep.InsertColumn(0, _T("出力設定(%)"), LVCFMT_LEFT, 80);
+			m_listOutput_NonStep.InsertColumn(1, _T("出力時間(msec)"), LVCFMT_LEFT, 100);
 		}
 		// リストコントロール2の初期化
-		else if (pRadio_Step->GetCheck())
+		else if (pRadio_Step.GetCheck())
 		{
 			// Up(立ち上がり)リスト初期化
 			// 既存データがある場合、すべて削除する
-			int stepUpDataCnt = m_listOutput_StepUp->GetItemCount();
+			int stepUpDataCnt = m_listOutput_StepUp.GetItemCount();
 			if (stepUpDataCnt > 0)
 			{
 				for (int i = 0; i < stepUpDataCnt; i++)
 				{
-					m_listOutput_StepUp->DeleteItem(0);
+					m_listOutput_StepUp.DeleteItem(0);
 				}
 			}
-			int columnCount = m_listOutput_StepUp->GetHeaderCtrl()->GetItemCount();
+			int columnCount = m_listOutput_StepUp.GetHeaderCtrl()->GetItemCount();
 			for (int i = 0; i < columnCount; i++)
 			{
-				m_listOutput_StepUp->DeleteColumn(0);
+				m_listOutput_StepUp.DeleteColumn(0);
 			}
 
 			// Down(立ち下がり)リスト初期化
 			// 既存データがある場合、すべて削除する
-			int stepDwnDataCnt = m_listOutput_StepDwn->GetItemCount();
+			int stepDwnDataCnt = m_listOutput_StepDwn.GetItemCount();
 			if (stepDwnDataCnt > 0)
 			{
 				for (int i = 0; i < stepDwnDataCnt; i++)
 				{
-					m_listOutput_StepDwn->DeleteItem(0);
+					m_listOutput_StepDwn.DeleteItem(0);
 				}
 			}
-			columnCount = m_listOutput_StepDwn->GetHeaderCtrl()->GetItemCount();
+			columnCount = m_listOutput_StepDwn.GetHeaderCtrl()->GetItemCount();
 			for (int i = 0; i < columnCount; i++)
 			{
-				m_listOutput_StepDwn->DeleteColumn(0);
+				m_listOutput_StepDwn.DeleteColumn(0);
 			}
 
 			// 列追加
-			m_listOutput_StepUp->InsertColumn(0, _T("出力設定(%)"), LVCFMT_LEFT, 80);
-			m_listOutput_StepUp->InsertColumn(1, _T("出力時間(msec)"), LVCFMT_LEFT, 100);
-			m_listOutput_StepDwn->InsertColumn(0, _T("出力設定(%)"), LVCFMT_LEFT, 80);
-			m_listOutput_StepDwn->InsertColumn(1, _T("出力時間(msec)"), LVCFMT_LEFT, 100);
+			m_listOutput_StepUp.InsertColumn(0, _T("出力設定(%)"), LVCFMT_LEFT, 80);
+			m_listOutput_StepUp.InsertColumn(1, _T("出力時間(msec)"), LVCFMT_LEFT, 100);
+			m_listOutput_StepDwn.InsertColumn(0, _T("出力設定(%)"), LVCFMT_LEFT, 80);
+			m_listOutput_StepDwn.InsertColumn(1, _T("出力時間(msec)"), LVCFMT_LEFT, 100);
 		}
 
 		CSample3Dlg::OnOK();
@@ -1230,9 +1254,9 @@ void CSample3Dlg::CopySelectedItemToClipboard()
 	POSITION pos_StepUp = 0;
 	POSITION pos_StepDwn = 0;
 
-	pos_NonStep = m_listOutput_NonStep->GetFirstSelectedItemPosition();
-	pos_StepUp = m_listOutput_StepUp->GetFirstSelectedItemPosition();
-	pos_StepDwn = m_listOutput_StepDwn->GetFirstSelectedItemPosition();
+	pos_NonStep = m_listOutput_NonStep.GetFirstSelectedItemPosition();
+	pos_StepUp = m_listOutput_StepUp.GetFirstSelectedItemPosition();
+	pos_StepDwn = m_listOutput_StepDwn.GetFirstSelectedItemPosition();
 	if (!pos_NonStep && !pos_StepUp && !pos_StepDwn) return;
 
 	CString strText_NonStep, strText_StepUp, strText_StepDwn;
@@ -1241,17 +1265,17 @@ void CSample3Dlg::CopySelectedItemToClipboard()
 	// 非ステップ
 	if (pos_NonStep)
 	{
-		GetCopyText(m_listOutput_NonStep, pos_NonStep, strText_NonStep);
+		GetCopyText(&m_listOutput_NonStep, pos_NonStep, strText_NonStep);
 	}
 	// ステップ立ち上がり
 	else if (pos_StepUp)
 	{
-		GetCopyText(m_listOutput_StepUp, pos_StepUp, strText_StepUp);
+		GetCopyText(&m_listOutput_StepUp, pos_StepUp, strText_StepUp);
 	}
 	// ステップ立ち下がり
 	else if (pos_StepDwn)
 	{
-		GetCopyText(m_listOutput_StepDwn, pos_StepDwn, strText_StepDwn);
+		GetCopyText(&m_listOutput_StepDwn, pos_StepDwn, strText_StepDwn);
 	}
 
 	// クリップボードにコピー
@@ -1260,19 +1284,19 @@ void CSample3Dlg::CopySelectedItemToClipboard()
 		// 非ステップ
 		if (strText_NonStep.GetLength() > 0)
 		{
-			m_listOutput_NonStep->SetItemState(-1, 0, LVIS_SELECTED);
+			m_listOutput_NonStep.SetItemState(-1, 0, LVIS_SELECTED);
 			SetClipbored(strText_NonStep);
 		}
 		// ステップ立ち上がり
 		else if (strText_StepUp.GetLength() > 0)
 		{
-			m_listOutput_StepUp->SetItemState(-1, 0, LVIS_SELECTED);
+			m_listOutput_StepUp.SetItemState(-1, 0, LVIS_SELECTED);
 			SetClipbored(strText_StepUp);
 		}
 		// ステップ立ち下がり
 		else if (strText_StepDwn.GetLength() > 0)
 		{
-			m_listOutput_StepDwn->SetItemState(-1, 0, LVIS_SELECTED);
+			m_listOutput_StepDwn.SetItemState(-1, 0, LVIS_SELECTED);
 			SetClipbored(strText_StepDwn);
 		}
 	}
@@ -1305,7 +1329,7 @@ void CSample3Dlg::SetClipbored(CString str)
 {
 	EmptyClipboard();
 	HGLOBAL hGlob;
-	m_listOutput_StepUp->SetItemState(-1, 0, LVIS_SELECTED);
+	m_listOutput_StepUp.SetItemState(-1, 0, LVIS_SELECTED);
 	hGlob = GlobalAlloc(GMEM_MOVEABLE, (str.GetLength() + 1) * sizeof(TCHAR));
 	if (hGlob)
 	{
@@ -1507,16 +1531,16 @@ void CSample3Dlg::OnBnClickedButtonCpNonstep()
 {
 	POSITION pos_NonStep = 0;
 	CString strText_NonStep;
-	int itemCnt =m_listOutput_NonStep->GetItemCount();
+	int itemCnt =m_listOutput_NonStep.GetItemCount();
 	// 全行を選択した状態にする
 	for (int i = 0; i < itemCnt; ++i)
 	{
-		m_listOutput_NonStep->SetItemState(i, LVIS_SELECTED, LVIS_SELECTED);
+		m_listOutput_NonStep.SetItemState(i, LVIS_SELECTED, LVIS_SELECTED);
 	}
-	pos_NonStep = m_listOutput_NonStep->GetFirstSelectedItemPosition();
+	pos_NonStep = m_listOutput_NonStep.GetFirstSelectedItemPosition();
 
 	// テキストデータ取得
-	GetCopyText(m_listOutput_NonStep, pos_NonStep, strText_NonStep);
+	GetCopyText(&m_listOutput_NonStep, pos_NonStep, strText_NonStep);
 	
 	// クリップボードにコピー
 	if (OpenClipboard())
@@ -1524,7 +1548,7 @@ void CSample3Dlg::OnBnClickedButtonCpNonstep()
 		// 非ステップ
 		if (strText_NonStep.GetLength() > 0)
 		{
-			m_listOutput_NonStep->SetItemState(-1, 0, LVIS_SELECTED);
+			m_listOutput_NonStep.SetItemState(-1, 0, LVIS_SELECTED);
 			SetClipbored(strText_NonStep);
 		}
 	}
@@ -1535,16 +1559,16 @@ void CSample3Dlg::OnBnClickedButtonCpStepUp()
 {
 	POSITION pos_StepUp = 0;
 	CString strText_StepUp;
-	int itemCnt = m_listOutput_StepUp->GetItemCount();
+	int itemCnt = m_listOutput_StepUp.GetItemCount();
 	// 全行を選択した状態にする
 	for (int i = 0; i < itemCnt; ++i)
 	{
-		m_listOutput_StepUp->SetItemState(i, LVIS_SELECTED, LVIS_SELECTED);
+		m_listOutput_StepUp.SetItemState(i, LVIS_SELECTED, LVIS_SELECTED);
 	}
-	pos_StepUp = m_listOutput_StepUp->GetFirstSelectedItemPosition();
+	pos_StepUp = m_listOutput_StepUp.GetFirstSelectedItemPosition();
 
 	// テキストデータ取得
-	GetCopyText(m_listOutput_StepUp, pos_StepUp, strText_StepUp);
+	GetCopyText(&m_listOutput_StepUp, pos_StepUp, strText_StepUp);
 
 	// クリップボードにコピー
 	if (OpenClipboard())
@@ -1552,7 +1576,7 @@ void CSample3Dlg::OnBnClickedButtonCpStepUp()
 		// ステップ(立ち上がり)
 		if (strText_StepUp.GetLength() > 0)
 		{
-			m_listOutput_StepUp->SetItemState(-1, 0, LVIS_SELECTED);
+			m_listOutput_StepUp.SetItemState(-1, 0, LVIS_SELECTED);
 			SetClipbored(strText_StepUp);
 		}
 	}
@@ -1563,16 +1587,16 @@ void CSample3Dlg::OnBnClickedButtonCpStepDwn()
 {
 	POSITION pos_StepDwn = 0;
 	CString strText_StepDwn;
-	int itemCnt = m_listOutput_StepDwn->GetItemCount();
+	int itemCnt = m_listOutput_StepDwn.GetItemCount();
 	// 全行を選択した状態にする
 	for (int i = 0; i < itemCnt; ++i)
 	{
-		m_listOutput_StepDwn->SetItemState(i, LVIS_SELECTED, LVIS_SELECTED);
+		m_listOutput_StepDwn.SetItemState(i, LVIS_SELECTED, LVIS_SELECTED);
 	}
-	pos_StepDwn = m_listOutput_StepDwn->GetFirstSelectedItemPosition();
+	pos_StepDwn = m_listOutput_StepDwn.GetFirstSelectedItemPosition();
 
 	// テキストデータ取得
-	GetCopyText(m_listOutput_StepDwn, pos_StepDwn, strText_StepDwn);
+	GetCopyText(&m_listOutput_StepDwn, pos_StepDwn, strText_StepDwn);
 
 	// クリップボードにコピー
 	if (OpenClipboard())
@@ -1580,7 +1604,7 @@ void CSample3Dlg::OnBnClickedButtonCpStepDwn()
 		// ステップ(立ち下がり)
 		if (strText_StepDwn.GetLength() > 0)
 		{
-			m_listOutput_StepDwn->SetItemState(-1, 0, LVIS_SELECTED);
+			m_listOutput_StepDwn.SetItemState(-1, 0, LVIS_SELECTED);
 			SetClipbored(strText_StepDwn);
 		}
 	}
