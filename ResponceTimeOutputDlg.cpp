@@ -104,6 +104,13 @@ struct thresholdSt_Step
 };
 thresholdSt_Step threshold_Step;
 
+// 折れ線系列構造体
+struct LineSeries {
+	CString name;              // 系列名（例: "A-1-1"）
+	std::vector<CPoint> data;  // データポイント
+	COLORREF color;            // 系列の色
+};
+
 /////////////////////////////////////////////////////////////////////////////
 // アプリケーションのバージョン情報で使われている CAboutDlg ダイアログ
 
